@@ -14,8 +14,9 @@
  */
 
 const CONFIG = {
-  TEMPLATE_DOC_ID: 'Add the Id of the google template',
-  STAKEHOLDER_EMAILS: ['ADD an Email to inform the team member'],
+  TEMPLATE_DOC_ID: 'REPLACE_WITH_YOUR_GOOGLE_DOC_TEMPLATE_ID',
+  STAKEHOLDER_EMAILS: ['security-team@example.com'],
+  CHAT_WEBHOOK_URL = 'https://chat.googleapis.com/v1/spaces/...'; // Replace with your Chat Webhook
   INCIDENT_PREFIX: 'INC',
   DOC_PREFIX: 'Incident Report - ',
   LOG_SPREADSHEET_ID: '', // Optional for logging
