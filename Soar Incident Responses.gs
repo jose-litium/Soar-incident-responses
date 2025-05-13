@@ -14,8 +14,8 @@
  */
 
 const CONFIG = {
-  TEMPLATE_DOC_ID: '1T9EaaTVb3kQKV2BCq3-LSu5ARk4SNPQKg9glCz17f18',
-  STAKEHOLDER_EMAILS: ['merlindo2002@gmail.com'],
+  TEMPLATE_DOC_ID: 'Add the Id of the google template',
+  STAKEHOLDER_EMAILS: ['ADD an Email to inform the team member'],
   INCIDENT_PREFIX: 'INC',
   DOC_PREFIX: 'Incident Report - ',
   LOG_SPREADSHEET_ID: '', // Optional for logging
