@@ -5,39 +5,39 @@
 This project simulates the kickoff of a security incident response process, automated through Google Workspace tools. It mimics how a Chronicle SOAR block could trigger workflows upon detecting an incident via API or webhook.
 
 The solution includes:
-- 📄 Google Docs: auto-generated incident report based on a template.
-- 📬 Gmail/Chat: automatic incident kickoff communication with stakeholders.
-- 🧠 Executive summary creation.
-- ⏰ Scheduled reminders (optional).
-- 📈 Extensible SOAR-style logic for future enhancements.
+- 📄 **Google Docs**: Auto-generated incident report based on a template.
+- 📬 **Gmail/Chat**: Automatic incident kickoff communication with stakeholders.
+- 🧠 **Executive Summary Creation**: Generated and added to the report.
+- ⏰ **Scheduled Reminders**: Optional feature for follow-up notifications.
+- 📈 **Extensible SOAR-Style Logic**: Framework for future enhancements like integration with Google Chronicle.
 
 ---
 
 ## 🎯 Use Case Scenario
 
-An alert was raised after a user logged into Google Workspace from Ghana. The login matched a known IOC and MFA was used. The user was accessing sensitive data, and an incident was triggered for formal IR process.
+An alert was raised after a user logged into Google Workspace from Ghana. The login matched a known IOC (Indicator of Compromise) and MFA (Multi-Factor Authentication) was used. The user was accessing sensitive data, and an incident was triggered for the formal Incident Response (IR) process.
 
 ---
 
 ## 🔩 Components & Workflow
 
 1. **Trigger**:
-   - Via Webhook (`doPost`) or Manual execution (`main()`).
-
+   - Incident detection can be triggered via Webhook (`doPost`) or manually by executing the `main()` function.
+   
 2. **Incident Object Construction**:
-   - Parses input JSON (see [`mock_incident.json`](./mock_incident.json)).
+   - The incident data is parsed from input JSON (for testing, see the [`mock_incident.json`](./mock_incident.json) file).
 
 3. **Document Creation**:
-   - Uses `createIncidentReport()` to clone a Google Docs template and populate placeholders.
+   - The function `createIncidentReport()` clones a Google Docs template and populates the document with incident details using placeholders.
 
 4. **Executive Summary**:
-   - Created by `generateExecutiveSummary()` and inserted at the top of the document.
+   - The function `generateExecutiveSummary()` creates a brief summary of the incident and inserts it at the top of the report.
 
 5. **Kickoff Communication**:
-   - `sendIncidentNotification()` sends a Gmail message with summary and doc link to stakeholders.
+   - The function `sendIncidentNotification()` sends an email via Gmail to relevant stakeholders with a summary and a link to the generated incident report.
 
 6. **Logging**:
-   - Activities logged (can be expanded to Google Sheets or Stackdriver).
+   - Actions and key events are logged. This can be extended to log into a Google Sheet or Stackdriver for tracking and monitoring.
 
 ---
 
@@ -45,32 +45,34 @@ An alert was raised after a user logged into Google Workspace from Ghana. The lo
 
 | Role            | Responsibility                      |
 |-----------------|--------------------------------------|
-| SecOps Lead     | Coordinates IR, triage, follow-up    |
-| On-Call Engineer| Takes initial actions, updates report|
-| Product Owner   | Provides system context              |
-| Management      | Receives high-level status           |
+| SecOps Lead     | Coordinates the IR process, triages the incident, and performs follow-up actions. |
+| On-Call Engineer| Takes immediate action on the incident, updates the report with actions taken. |
+| Product Owner   | Provides context and prioritization for the impacted systems. |
+| Management      | Receives high-level status updates and makes decisions based on the incident severity. |
 
 ---
 
 ## ⚙️ Tech Stack
 
-- Google Apps Script
-- Google Docs (template-based)
-- Gmail / Google Chat APIs *(Chat optional)*
-- JSON-based incident input
+- **Google Apps Script**: For automation and workflow orchestration.
+- **Google Docs**: Template-based document generation for incident reports.
+- **Gmail / Google Chat APIs**: For sending incident notifications to stakeholders (Google Chat integration is optional).
+- **JSON-based Input**: Structured format for incident input, ensuring consistency across reports.
 
 ---
 
 ## 🔐 Security Process Design
 
-- Enforces structured data input.
-- Centralized documentation.
-- Minimal manual steps.
-- Support for human review + automated alerts.
+- **Structured Data Input**: Ensures all relevant information is collected before processing.
+- **Centralized Documentation**: All incident details are stored in a Google Doc, facilitating easy access and management.
+- **Minimal Manual Steps**: Automation of report creation, email notifications, and status tracking minimizes human intervention.
+- **Human Review + Automated Alerts**: The process allows for human oversight while sending automated alerts to ensure timely responses.
 
 ---
 
 ## 📎 Input Example
+
+Here is an example of the JSON input that triggers the automation. This JSON is typically sent via API or used for testing:
 
 ```json
 {
