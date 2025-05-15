@@ -63,3 +63,18 @@ flowchart TD
     AppsScript -->|Email| Mailjet
     AppsScript -->|Alert| Slack
     AppsScript -->|Log| Logger
+
+## Tips & Troubleshooting
+
+### Tips
+
+- **Start with manual runs** (`main()` function) to validate your configuration before connecting to webhooks.
+- **Use a curl script to simulate incidents:**
+
+  Example:
+  ```bash
+  curl -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"user":"test@company.com","login_ip":"123.45.67.89","severity":"High"}' \
+    https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+
