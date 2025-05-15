@@ -1,3 +1,8 @@
+## 📝 Example Incident JSON
+
+Below is a sample JSON payload representing a security incident. This format is used when interacting with the SOAR webhook (for example, using `curl`, Google Chronicle, or other automated sources):
+
+```json
 {
   "incident_id": "INC-20250513-114200",
   "timestamp": "2025-05-13T11:42:00Z",
