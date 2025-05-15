@@ -101,3 +101,31 @@ All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.
 
 **Tip:**  
 Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
+
+
+---
+
+## High-Level Architecture Diagram
+
+```mermaid
+flowchart TD
+    CurlTest["curl Randomizer"]
+    Chronicle["Chronicle SIEM"]
+    Manual["Manual Run"]
+    AppsScript["Apps Script"]
+    GoogleDocs["Docs (Report)"]
+    GoogleSheets["Sheets (Log)"]
+    Mailjet["Mailjet"]
+    Slack["Slack"]
+    Logger["Logger"]
+
+    CurlTest -->|POST| AppsScript
+    Chronicle -->|Webhook| AppsScript
+    Manual --> AppsScript
+
+    AppsScript -->|Report| GoogleDocs
+    AppsScript -->|Log| GoogleSheets
+    AppsScript -->|Email| Mailjet
+    AppsScript -->|Alert| Slack
+    AppsScript -->|Log| Logger
+
