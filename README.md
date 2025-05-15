@@ -1,97 +1,177 @@
-# SOAR-Inspired Google Workspace Incident Automation
+SOAR Incident Response Automation
+Automated incident response and documentation using Google Apps Script, Google Workspace (Docs, Sheets), Mailjet, and Slack.
 
-## 📌 Overview
+<div align="center"> <img src="https://img.shields.io/badge/Automation-Google%20Apps%20Script-blue" alt="Google Apps Script"/> <img src="https://img.shields.io/badge/Email-Mailjet-green" alt="Mailjet"/> <img src="https://img.shields.io/badge/Chat-Slack-%234A154B" alt="Slack"/> </div>
+Table of Contents
+Description
 
-This project simulates the kickoff of a security incident response process, automated through Google Workspace tools. It mimics how a Chronicle SOAR block could trigger workflows upon detecting an incident via API or webhook.
+Architecture
 
-The solution includes:
-- 📄 **Google Docs**: Auto-generated incident report based on a template.
-- 📬 **Gmail/Chat**: Automatic incident kickoff communication with stakeholders.
-- 🧠 **Executive Summary Creation**: Generated and added to the report.
-- ⏰ **Scheduled Reminders**: Optional feature for follow-up notifications.
-- 📈 **Extensible SOAR-Style Logic**: Framework for future enhancements like integration with Google Chronicle.
+Configuration
 
----
+Code Structure
 
-## 🎯 Use Case Scenario
+Automation and Workflow
 
-An alert was raised after a user logged into Google Workspace from Ghana. The login matched a known IOC (Indicator of Compromise) and MFA (Multi-Factor Authentication) was used. The user was accessing sensitive data, and an incident was triggered for the formal Incident Response (IR) process.
+Notifications
 
----
+Customization
 
-## 🔩 Components & Workflow
+Installation and Usage
 
-1. **Trigger**:
-   - Incident detection can be triggered via Webhook (`doPost`) or manually by executing the `main()` function.
-   
-2. **Incident Object Construction**:
-   - The incident data is parsed from input JSON (for testing, see the [`mock_incident.json`](./mock_incident.json) file).
+License
 
-3. **Document Creation**:
-   - The function `createIncidentReport()` clones a Google Docs template and populates the document with incident details using placeholders.
+Useful Links
 
-4. **Executive Summary**:
-   - The function `generateExecutiveSummary()` creates a brief summary of the incident and inserts it at the top of the report.
+Credits
 
-5. **Kickoff Communication**:
-   - The function `sendIncidentNotification()` sends an email via Gmail to relevant stakeholders with a summary and a link to the generated incident report.
+Description
+This project implements an automated workflow for managing and documenting security incidents ("SOAR": Security Orchestration, Automation, and Response) using Google's suite (Docs and Sheets), professional email delivery via Mailjet, and notifications in Slack channels.
 
-6. **Logging**:
-   - Actions and key events are logged. This can be extended to log into a Google Sheet or Stackdriver for tracking and monitoring.
+Key Features:
 
----
+Automatic incident ingestion (webhook, HTTP POST, or manual).
 
-## 👥 Stakeholders & Roles
+Generation of document reports from Google Docs templates.
 
-| Role            | Responsibility                      |
-|-----------------|--------------------------------------|
-| SecOps Lead     | Coordinates the IR process, triages the incident, and performs follow-up actions. |
-| On-Call Engineer| Takes immediate action on the incident, updates the report with actions taken. |
-| Product Owner   | Provides context and prioritization for the impacted systems. |
-| Management      | Receives high-level status updates and makes decisions based on the incident severity. |
+Automatic email notifications to stakeholders (HTML, with Gmail fallback).
 
----
+Slack channel/group notifications with report links.
 
-## ⚙️ Tech Stack
+Centralized incident logging in Google Sheets.
 
-- **Google Apps Script**: For automation and workflow orchestration.
-- **Google Docs**: Template-based document generation for incident reports.
-- **Gmail / Google Chat APIs**: For sending incident notifications to stakeholders (Google Chat integration is optional).
-- **JSON-based Input**: Structured format for incident input, ensuring consistency across reports.
+Actions and recommendations tailored to severity levels.
 
----
+Architecture
+mermaid
+Copy
+Edit
+flowchart TD
+    Webhook["Webhook (HTTP POST)"] -->|Incident Data| AppsScript
+    Manual["Main() Manual"] --> AppsScript
+    AppsScript -->|Create Report| GoogleDocs["Google Docs (Report)"]
+    AppsScript -->|Log Entry| GoogleSheets["Google Sheets (Log)"]
+    AppsScript -->|Email| Mailjet["Mailjet / GmailApp"]
+    AppsScript -->|Alert| Slack["Slack (Webhook)"]
+    AppsScript -->|Stackdriver Logging| Logger
+Configuration
+1. Configuration Variables (CONFIG)
+Edit the variables according to your environment at the top of the script:
 
-## 🔐 Security Process Design
+js
+Copy
+Edit
+const CONFIG = {
+  TEMPLATE_DOC_ID: 'TEMPLATE-ID',     // Google Docs template ID
+  STAKEHOLDER_EMAILS: ['youremail@company.com'], // List of emails to notify
+  INCIDENT_PREFIX: 'INC',              // Prefix for incident IDs
+  DOC_PREFIX: 'Incident Report - ',    // Prefix for document names
+  LOG_SPREADSHEET_ID: 'SPREADSHEET-ID',// Google Sheets ID for logs
+  REPLY_TO_EMAIL: 'soar-bot@company.com',
+  SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/XXX', // Slack webhook
+  SLACK_GROUP_LINK: 'https://join.slack.com/...',            // Slack group invite
+  FROM_EMAIL: 'sender@company.com',   // Sender validated in Mailjet
+  FROM_NAME: 'Security Incident Bot',
+  USE_MAILJET: true
+};
+Important:
 
-- **Structured Data Input**: Ensures all relevant information is collected before processing.
-- **Centralized Documentation**: All incident details are stored in a Google Doc, facilitating easy access and management.
-- **Minimal Manual Steps**: Automation of report creation, email notifications, and status tracking minimizes human intervention.
-- **Human Review + Automated Alerts**: The process allows for human oversight while sending automated alerts to ensure timely responses.
+Register the MAILJET_API_KEY and MAILJET_API_SECRET in the script's properties (ScriptProperties).
 
----
+Code Structure
+main(): Manual simulation of an incident (testing).
 
-## 📎 Input Example
+doPost(e): HTTP POST webhook for automated ingestion.
 
-Here is an example of the JSON input that triggers the automation. This JSON is typically sent via API or used for testing:
+processIncident(incident): Orchestrates the entire workflow (report, email, Slack, log).
 
-```json
-{
-  "incident_id": "INC-20250513-114200",
-  "timestamp": "2025-05-13T11:42:00Z",
-  "user": "john.error404@yougothack.com",
-  "login_ip": "196.251.72.142",
-  "location": "Ghana",
-  "mfa_used": true,
-  "ioc_matched": true,
-  "sensitive_data_accessed": true,
-  "severity": "High",
-  "status": "Open",
-  "timeline": [
-    { "time": "2025-05-13T11:40:00Z", "event": "Login detected" },
-    { "time": "2025-05-13T11:41:00Z", "event": "IOC match confirmed" }
-  ],
-  "actions_taken": [
-    "User account temporarily suspended",
-    "Endpoint isolation initiated"
-  ]
-}
+createIncidentFromData(data): Structures input data into a standard incident.
+
+createIncidentReport(incident): Generates a document from a template with incident data.
+
+insertSummaryToDoc(docId, summary, incident): Inserts executive summary and details into the report.
+
+sendIncidentNotification(...): Sends HTML email notifications to stakeholders.
+
+sendSlackNotification(...): Sends the incident to the Slack channel.
+
+logIncidentToSheet(...): Logs the incident in Google Sheets.
+
+sendEmail(...), sendViaMailjet(...): Sends email via Mailjet or GmailApp.
+
+getSeverityActionsArray(...): Recommends actions based on severity.
+
+generateExecutiveSummary(...): Executive summary for report/email.
+
+formatDateTime(...): Formats dates into readable strings.
+
+logActivity(...): Basic logging.
+
+Automation and Workflow
+1. Incident Reception
+Via Webhook (POST) or manual (main() function).
+
+2. Processing
+Structuring and validating the data.
+
+Generating a unique ID for the incident.
+
+3. Documentation
+Copies a Google Docs from a template.
+
+Inserts all data, executive summary, compliance checklist (GDPR, NIS2), investigation links, and follow-up tasks.
+
+4. Notification
+Sends HTML emails to stakeholders (Mailjet or GmailApp).
+
+Alerts in Slack channel (webhook), adapting color/icon to severity.
+
+Logs details in a spreadsheet (Google Sheets).
+
+Notifications
+Email:
+
+HTML style, main details, direct links to investigation (VirusTotal, IPinfo, AbuseIPDB), and access to report and log.
+
+Slack:
+
+Message with icon and color based on severity, executive summary, and direct links.
+
+Google Sheets:
+
+Incident logged with link to the document report and timestamp.
+
+Customization
+Docs Template:
+You can customize the Google Docs document (using placeholders like {{INCIDENT_ID}}).
+
+HTML Emails:
+Edit the style, branding, or add more buttons/links in sendIncidentNotification().
+
+Severity Recommendations:
+Modify the lists in getSeverityActionsArray() and the HTML advice in sendIncidentNotification().
+
+Installation and Usage
+Copy the script to your Google Apps Script or Google Workspace environment.
+
+Configure the necessary IDs and properties.
+
+Set up triggers if you want automatic ingestion (doPost).
+
+Test the workflow by running main() or sending a POST webhook.
+
+License
+MIT.
+You can use, modify, and adapt this workflow in your company or organization.
+
+Useful Links
+Google Apps Script Docs
+
+Mailjet Docs
+
+Slack Incoming Webhooks
+
+Credits
+Developed by @jose-litium
+Enhanced with the help of ChatGPT.
+
