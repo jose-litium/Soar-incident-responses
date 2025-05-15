@@ -191,9 +191,3 @@ rule Suspicious_Login_with_IOC_and_Data_Access
 *Prepared by Jose Moreno, May 2025*
 
 ```
-
----
-
-¿Así está perfecto? Si necesitas una sección extra (pruebas, troubleshooting, traducción) solo dime.  
-¡Este es el bloque único y estructurado que pediste!
-```
