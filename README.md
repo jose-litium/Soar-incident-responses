@@ -64,6 +64,8 @@ flowchart TD
     AppsScript -->|Alert| Slack
     AppsScript -->|Log| Logger
 
+---
+
 ## Tips & Troubleshooting
 
 ### Tips
