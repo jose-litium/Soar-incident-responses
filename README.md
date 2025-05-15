@@ -22,7 +22,7 @@ Automated incident response and documentation for Google Workspace environments 
 - [Improvements and Ideas](improvements.md)
 - [License](License.md)
 - [Credits](Credits.md)
-
+- [Chronicle Integration](Chronicle_Integration_Example.md))
 ---
 
 ## Description
