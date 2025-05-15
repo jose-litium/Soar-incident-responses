@@ -44,22 +44,22 @@ This project implements an **automated workflow** for managing and documenting s
 
 ```mermaid
 flowchart TD
-    CurlTest["curl Randomizer (simulate POSTs with random IPs)"]
-    Chronicle["Google Chronicle (SIEM/SOAR)"]
-    Manual["Manual Run (main function)"]
-    AppsScript["Google Apps Script (SOAR Logic)"]
-    GoogleDocs["Google Docs (Incident Report)"]
-    GoogleSheets["Google Sheets (Incident Log)"]
-    Mailjet["Mailjet (HTML Email)"]
-    Slack["Slack (Webhook)"]
-    Logger["Stackdriver Logging"]
+    CurlTest["curl Randomizer"]
+    Chronicle["Chronicle SIEM"]
+    Manual["Manual Run"]
+    AppsScript["Apps Script"]
+    GoogleDocs["Docs (Report)"]
+    GoogleSheets["Sheets (Log)"]
+    Mailjet["Mailjet"]
+    Slack["Slack"]
+    Logger["Logger"]
 
-    CurlTest -->|POST Incident Data| AppsScript
-    Chronicle -->|Webhook Incident| AppsScript
+    CurlTest -->|POST| AppsScript
+    Chronicle -->|Webhook| AppsScript
     Manual --> AppsScript
 
-    AppsScript -->|Create Report| GoogleDocs
-    AppsScript -->|Log Entry| GoogleSheets
-    AppsScript -->|Send Email| Mailjet
+    AppsScript -->|Report| GoogleDocs
+    AppsScript -->|Log| GoogleSheets
+    AppsScript -->|Email| Mailjet
     AppsScript -->|Alert| Slack
     AppsScript -->|Log| Logger
