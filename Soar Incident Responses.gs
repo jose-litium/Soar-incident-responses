@@ -1,79 +1,83 @@
-// Global configuration containing necessary values for incident processing
+// === Global configuration for the SOAR workflow ===
 const CONFIG = {
-  TEMPLATE_DOC_ID: 'TEMPLATE-ID', // Google Docs template ID
-  STAKEHOLDER_EMAILS: ['youremail@company.com'], // List of emails to notify
-  INCIDENT_PREFIX: 'INC', // Prefix for incident IDs
-  DOC_PREFIX: 'Incident Report - ', // Prefix for document names
-  LOG_SPREADSHEET_ID: 'SPREADSHEET-ID', // Google Sheets ID for logs
-  REPLY_TO_EMAIL: 'soar-bot@company.com',
-  SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/XXX', // Slack webhook
-  SLACK_GROUP_LINK: 'https://join.slack.com/...', // Slack group invite
-  FROM_EMAIL: 'sender@company.com', // Sender validated in Mailjet
-  FROM_NAME: 'Security Incident Bot',
-  USE_MAILJET: true
+  TEMPLATE_DOC_ID: 'TEMPLATE-ID',                 // Google Docs template ID for incident report generation
+  STAKEHOLDER_EMAILS: ['youremail@company.com'],  // List of stakeholders to receive notifications
+  INCIDENT_PREFIX: 'INC',                         // Prefix for generated incident IDs
+  DOC_PREFIX: 'Incident Report - ',               // Prefix for incident report document names
+  LOG_SPREADSHEET_ID: 'SPREADSHEET-ID',           // Google Sheets ID for incident logging
+  REPLY_TO_EMAIL: 'soar-bot@company.com',         // Reply-to address for email notifications
+  SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/XXX',  // Slack webhook for notifications
+  SLACK_GROUP_LINK: 'https://join.slack.com/...', // (Optional) Slack group invite for users
+  FROM_EMAIL: 'sender@company.com',               // The validated sender email in Mailjet
+  FROM_NAME: 'Security Incident Bot',             // Display name for sent emails
+  USE_MAILJET: true                               // Set false to fallback to GmailApp instead of Mailjet
 };
 
 /**
- * Main function to simulate manual incident processing (testing only)
+ * MAIN (manual test): Simulate an incident end-to-end.
+ * Use this to test all integrations without a real webhook.
  */
 function main() {
   const incident = {
-    incident_id: generateIncidentId(),  // Generate a unique ID for the incident
-    timestamp: new Date().toISOString(),  // Timestamp of the incident
-    user: 'criminals@company.com',  // User involved in the incident
-    login_ip: '101.206.168.120',  // IP address from where the login was made
-    location: 'India',  // Location of the incident
-    mfa_used: true,  // Whether multi-factor authentication (MFA) was used
-    ioc_matched: true,  // Whether an indicator of compromise (IOC) was matched
-    sensitive_data_accessed: true,  // Whether sensitive data was accessed
-    severity: 'High',  // Severity level of the incident
-    status: 'Open',  // Status of the incident
-    timeline: [
-      { time: new Date().toISOString(), event: 'Initial login detected' },  // Event of initial login detection
-      { time: new Date().toISOString(), event: 'IOC match confirmed' }  // IOC match confirmed event
+    incident_id: generateIncidentId(),                 // Generate a unique incident ID
+    timestamp: new Date().toISOString(),               // When incident was detected/created
+    user: 'criminals@company.com',                     // User or account involved
+    login_ip: '101.206.168.120',                       // Source IP address of suspicious activity
+    location: 'India',                                 // Where the incident originated (geoip, etc.)
+    mfa_used: true,                                    // Whether MFA was used in the session
+    ioc_matched: true,                                 // Did the activity match an IOC (Indicator of Compromise)?
+    sensitive_data_accessed: true,                     // Was sensitive data accessed?
+    severity: 'High',                                  // Severity (e.g. High, Medium, Low)
+    status: 'Open',                                    // Current status (Open, Closed, etc.)
+    timeline: [                                        // Chronological events for incident timeline
+      { time: new Date().toISOString(), event: 'Initial login detected' },
+      { time: new Date().toISOString(), event: 'IOC match confirmed' }
     ],
     actions_taken: [
-      'User account temporarily suspended',  // Action taken: suspend user account temporarily
-      'Endpoint isolation initiated'  // Action taken: initiate endpoint isolation
+      'User account temporarily suspended',            // Action #1
+      'Endpoint isolation initiated'                   // Action #2
     ]
   };
-    processIncident(incident);  // Process the incident
+  processIncident(incident); // Process the simulated incident
 }
 
 /**
- * Function for automated incident intake via HTTP POST (e.g., from curl or webhook)
+ * HTTP POST handler (for webhook integration).
+ * Triggered by external POST (e.g. cURL, SIEM, Chronicle, etc.).
+ * Expects JSON in body; returns status message.
  */
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);  // Retrieve the data from the webhook
-    const incident = createIncidentFromData(data);  // Create an incident from the received data
-    processIncident(incident);  // Process the incident
+    const data = JSON.parse(e.postData.contents);      // Parse incoming JSON data from POST
+    const incident = createIncidentFromData(data);     // Map raw data to internal incident object
+    processIncident(incident);                         // Main workflow
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'success',  // Success response
-      incident_id: incident.incident_id  // Return the ID of the processed incident
+      status: 'success',
+      incident_id: incident.incident_id
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
-    logActivity(`Webhook error: ${error.message}`, 'ERROR');  // Log the error
+    // Error-handling: log & return error message
+    logActivity(`Webhook error: ${error.message}`, 'ERROR');
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',  // Error response
-      message: error.message  // Error message
+      status: 'error',
+      message: error.message
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 /**
- * Envía un correo HTML.  
- * Usa Mailjet si está activado; si falla, recurre a GmailApp.
+ * Send an HTML email (uses Mailjet by default, fallback to GmailApp if Mailjet fails).
  */
 function sendEmail(to, subject, html) {
   if (CONFIG.USE_MAILJET) {
     try {
       sendViaMailjet(to, subject, html);
-      return;                               // salió bien → terminamos
+      return; // success!
     } catch (err) {
-      logActivity('Mailjet falló: ' + err.message, 'WARN');
+      logActivity('Mailjet failed: ' + err.message, 'WARN');
     }
   }
-  // Fallback a GmailApp (sigue sujeto al cupo de 100/día)
+  // Fallback: GmailApp (subject to Google daily quota)
   GmailApp.sendEmail(to, subject, '', {
     htmlBody: html,
     replyTo: CONFIG.REPLY_TO_EMAIL,
@@ -81,15 +85,19 @@ function sendEmail(to, subject, html) {
   });
 }
 
-/** Llamada de bajo nivel a la API de Mailjet */
+/**
+ * Low-level Mailjet API call.
+ * Requires Mailjet API keys set in Apps Script project properties.
+ */
 function sendViaMailjet(to, subject, html) {
   const props  = PropertiesService.getScriptProperties();
   const apiKey = props.getProperty('MAILJET_API_KEY');
   const apiSec = props.getProperty('MAILJET_API_SECRET');
   if (!apiKey || !apiSec) {
-    throw new Error('Faltan MAILJET_API_KEY / MAILJET_API_SECRET');
+    throw new Error('Missing MAILJET_API_KEY / MAILJET_API_SECRET');
   }
 
+  // Format the API payload for Mailjet
   const payload = {
     Messages: [{
       From:    { Email: CONFIG.FROM_EMAIL, Name: CONFIG.FROM_NAME },
@@ -109,45 +117,47 @@ function sendViaMailjet(to, subject, html) {
 
   const resp = UrlFetchApp.fetch('https://api.mailjet.com/v3.1/send', options);
   if (resp.getResponseCode() >= 400) {
-    throw new Error(resp.getContentText()); // hará que salte el fallback
+    throw new Error(resp.getContentText()); // Triggers fallback if Mailjet call fails
   }
 }
 
 /**
- * Central function to process and handle a security incident
+ * Main workflow: document, email, Slack, logging.
+ * Orchestrates all incident actions end-to-end.
  */
 function processIncident(incident) {
-  const docId = createIncidentReport(incident);  // Create the incident report
-  const summary = generateExecutiveSummary(incident);  // Generate an executive summary of the incident
-  insertSummaryToDoc(docId, summary, incident);  // Insert the summary into the report
-  sendIncidentNotification(incident, docId, summary);  // Send email notifications
-  sendSlackNotification(incident, docId);  // Send a Slack notification
-  logIncidentToSheet(incident, docId);  // Log the incident to the spreadsheet
-  logActivity(`Processed incident ${incident.incident_id}`);  // Log the activity of processing
+  const docId = createIncidentReport(incident);              // 1. Create the report doc from template
+  const summary = generateExecutiveSummary(incident);        // 2. Make a short summary (used in email/slack)
+  insertSummaryToDoc(docId, summary, incident);              // 3. Fill in the report with all details
+  sendIncidentNotification(incident, docId, summary);        // 4. Send HTML email(s)
+  sendSlackNotification(incident, docId);                    // 5. Slack webhook notification
+  logIncidentToSheet(incident, docId);                       // 6. Record in Google Sheet log
+  logActivity(`Processed incident ${incident.incident_id}`); // 7. Local log (Stackdriver)
 }
 
 /**
- * Converts raw data into a structured incident object
+ * Normalize and validate external data into a standard incident object.
  */
 function createIncidentFromData(data) {
   return {
-    incident_id: data.incident_id || generateIncidentId(),  // Incident ID
-    timestamp: data.timestamp || new Date().toISOString(),  // Timestamp of the incident
-    user: data.user || 'unknown@company.com',  // User involved
-    login_ip: data.login_ip || '0.0.0.0',  // Login IP address
-    location: data.location || 'Unknown',  // Location of the incident
-    mfa_used: data.mfa_used || false,  // Whether MFA was used
-    ioc_matched: data.ioc_matched || false,  // Whether IOC was matched
-    sensitive_data_accessed: data.sensitive_data_accessed || false,  // Whether sensitive data was accessed
-    severity: data.severity || 'Medium',  // Severity of the incident
-    status: data.status || 'Open',  // Status of the incident
-    timeline: data.timeline || [],  // Event timeline
-    actions_taken: data.actions_taken || []  // Actions taken during the incident
+    incident_id: data.incident_id || generateIncidentId(),        // Use given or generate unique ID
+    timestamp: data.timestamp || new Date().toISOString(),        // Use provided or now
+    user: data.user || 'unknown@company.com',
+    login_ip: data.login_ip || '0.0.0.0',
+    location: data.location || 'Unknown',
+    mfa_used: data.mfa_used || false,
+    ioc_matched: data.ioc_matched || false,
+    sensitive_data_accessed: data.sensitive_data_accessed || false,
+    severity: data.severity || 'Medium',
+    status: data.status || 'Open',
+    timeline: data.timeline || [],
+    actions_taken: data.actions_taken || []
   };
 }
 
 /**
- * Generates a unique incident ID based on the timestamp
+ * Generate a unique incident ID using date/time.
+ * Format: INC-YYYYMMDD-HHMMSS
  */
 function generateIncidentId() {
   const d = new Date();
@@ -155,22 +165,25 @@ function generateIncidentId() {
 }
 
 /**
- * Helper function to add leading zeros to single-digit numbers
+ * Pad single-digit numbers with a leading zero (for timestamps, IDs).
  */
 function pad(n) {
   return n.toString().padStart(2, '0');
 }
 
 /**
- * Creates a new document from a template and replaces placeholders
+ * Copies the Google Docs template and fills in placeholders with incident data.
+ * Returns the ID of the new document.
  */
 function createIncidentReport(incident) {
-  const copy = DriveApp.getFileById(CONFIG.TEMPLATE_DOC_ID).makeCopy(`${CONFIG.DOC_PREFIX}${incident.incident_id}`);  // Create a copy of the template document
-  const docId = copy.getId();  // Get the ID of the new document
-  const doc = DocumentApp.openById(docId);  // Open the document
-  const body = doc.getBody();  // Get the body of the document
+  // Copy the template and name it using the incident ID
+  const copy = DriveApp.getFileById(CONFIG.TEMPLATE_DOC_ID)
+    .makeCopy(`${CONFIG.DOC_PREFIX}${incident.incident_id}`);
+  const docId = copy.getId();
+  const doc = DocumentApp.openById(docId);
+  const body = doc.getBody();
 
-  // Replace placeholders in the template with actual values
+  // Replace placeholders (must match the template placeholders)
   const map = {
     '{{INCIDENT_ID}}': incident.incident_id,
     '{{TIMESTAMP}}': incident.timestamp,
@@ -184,28 +197,30 @@ function createIncidentReport(incident) {
     '{{STATUS}}': incident.status
   };
 
-  // Perform the replacement of placeholders with actual data
   Object.entries(map).forEach(([key, value]) => body.replaceText(key, value));
-  doc.saveAndClose();  // Save and close the document
-  return docId;  // Return the document ID
+  doc.saveAndClose();
+  return docId;
 }
 
-// Updated insertSummaryToDoc with clickable links and severity‑specific action lists
+/**
+ * Fully overwrite the doc with all sections: title, summary, table, timeline, actions, links, compliance, etc.
+ * Includes links and custom actions by severity.
+ */
 function insertSummaryToDoc(docId, summary, incident) {
   const doc = DocumentApp.openById(docId);
   const body = doc.getBody();
   body.clear();
 
-  // Title
+  // Report title (centered)
   body.insertParagraph(0, 'INCIDENT REPORT')
       .setHeading(DocumentApp.ParagraphHeading.TITLE)
       .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
-  // Executive summary
+  // Executive summary section
   body.appendParagraph('Executive Summary').setHeading(DocumentApp.ParagraphHeading.HEADING1);
   body.appendParagraph(summary);
 
-  // Incident details table
+  // Incident details as a table
   body.appendParagraph('Incident Details').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const table = body.appendTable([
     ['Incident ID:', incident.incident_id],
@@ -220,10 +235,10 @@ function insertSummaryToDoc(docId, summary, incident) {
     ['Status:', incident.status]
   ]);
   for (let r = 0; r < table.getNumRows(); r++) {
-    table.getRow(r).getCell(0).setBold(true);
+    table.getRow(r).getCell(0).setBold(true); // Bold the labels
   }
 
-  // Timeline
+  // Timeline as a bulleted list
   body.appendParagraph('Timeline').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   (incident.timeline || []).forEach(e =>
     body.appendListItem(`${formatDateTime(e.time)}: ${e.event}`));
@@ -232,7 +247,7 @@ function insertSummaryToDoc(docId, summary, incident) {
   body.appendParagraph('Actions Taken').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   (incident.actions_taken || []).forEach(a => body.appendListItem(a));
 
-  // Recommended actions based on severity
+  // Severity-based recommended actions
   const actions = getSeverityActionsArray(incident.severity);
   body.appendParagraph('Recommended SecOps Actions (EU)')
       .setHeading(DocumentApp.ParagraphHeading.HEADING2);
@@ -240,7 +255,7 @@ function insertSummaryToDoc(docId, summary, incident) {
       .setHeading(DocumentApp.ParagraphHeading.HEADING3);
   actions.items.forEach(i => body.appendListItem(i));
 
-  // Investigation links (clickable)
+  // Quick links for investigation
   body.appendParagraph('Investigation Links').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   const links = [
     ['VirusTotal', `https://www.virustotal.com/gui/ip-address/${incident.login_ip}`],
@@ -252,7 +267,7 @@ function insertSummaryToDoc(docId, summary, incident) {
     li.setLinkUrl(url);
   });
 
-  // EU compliance checklist
+  // Compliance checklist (EU, GDPR, etc.)
   body.appendParagraph('EU Compliance Checklist').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   body.appendTable([
     ['Requirement', 'Completed (Y/N)', 'Notes'],
@@ -263,7 +278,7 @@ function insertSummaryToDoc(docId, summary, incident) {
     ['DPO sign‑off obtained', '', '']
   ]);
 
-  // Follow‑up tasks
+  // Follow-up actions
   body.appendParagraph('Follow‑Up Tasks & Deadlines').setHeading(DocumentApp.ParagraphHeading.HEADING2);
   body.appendListItem('DD‑MMM‑YYYY – Complete endpoint forensic report');
   body.appendListItem('DD‑MMM‑YYYY – Review IAM policies for affected user');
@@ -274,15 +289,13 @@ function insertSummaryToDoc(docId, summary, incident) {
 }
 
 /**
- * Returns the heading title and bullet list of recommended actions
- * matching the severity level.
- * @param {string} sev Incident severity
- * @return {{title:string, items:string[]}}
+ * Returns the title and recommended actions based on severity level.
+ * Used for both doc and email.
  */
 function getSeverityActionsArray(sev) {
   switch (sev.toLowerCase()) {
     case 'high':
-    case 'hight': // accommodate common typo
+    case 'hight': // handle typo
     case 'critical':
       return {
         title: 'High Severity (Critical)',
@@ -320,21 +333,22 @@ function getSeverityActionsArray(sev) {
 }
 
 /**
- * Generates an executive summary for emails or reports
+ * Generates an executive summary (for email and doc).
+ * Provides quick human-readable context.
  */
 function generateExecutiveSummary(incident) {
   return `A security alert was triggered for user ${incident.user} from ${incident.location}. ` +
     `MFA was ${incident.mfa_used ? 'used' : 'not used'}, and the IP (${incident.login_ip}) ` +
     `${incident.ioc_matched ? 'matched a known IOC' : 'did not match known IOCs'}. ` +
     `Sensitive data was ${incident.sensitive_data_accessed ? '' : 'not '}accessed. ` +
-    `Severity level is ${incident.severity}.`;  // Return the executive summary string
+    `Severity level is ${incident.severity}.`;
 }
 
 /**
- * Logs incident details to a Google Sheets spreadsheet
+ * Log incident details as a row in Google Sheets for easy audit & filtering.
  */
 function logIncidentToSheet(incident, docId) {
-  const sheet = SpreadsheetApp.openById(CONFIG.LOG_SPREADSHEET_ID).getSheets()[0];  // Open the spreadsheet
+  const sheet = SpreadsheetApp.openById(CONFIG.LOG_SPREADSHEET_ID).getSheets()[0];
   sheet.appendRow([
     incident.incident_id,
     incident.timestamp,
@@ -346,13 +360,14 @@ function logIncidentToSheet(incident, docId) {
     incident.sensitive_data_accessed ? 'Yes' : 'No',
     incident.severity,
     incident.status,
-    `https://docs.google.com/document/d/${docId}/edit`,  // Link to the generated report
-    new Date().toISOString()  // Timestamp of the log
+    `https://docs.google.com/document/d/${docId}/edit`,
+    new Date().toISOString()
   ]);
 }
 
 /**
- * Sends a notification to a configured Slack channel
+ * Send notification to Slack channel via webhook.
+ * Uses different colors and icons based on severity.
  */
 function sendSlackNotification(incident, docId) {
   // Define the colors for different severity levels
@@ -369,16 +384,16 @@ function sendSlackNotification(incident, docId) {
     low: ':information_source:'
   };
 
-  // Set the background color based on the severity
+  // Set the background color and icon based on the severity
   const severity = incident.severity.toLowerCase();
-  const backgroundColor = severityColors[severity] || '#d1ecf1';  // Default to blue if severity is not recognized
-  const icon = severityIcons[severity] || ':information_source:';  // Default to info icon
+  const backgroundColor = severityColors[severity] || '#d1ecf1';  // Default to blue
+  const icon = severityIcons[severity] || ':information_source:'; // Default to info
 
   const payload = {
     text: `${icon} *${incident.severity}* Security Incident Detected`,
     attachments: [
       {
-        color: backgroundColor, // Set the color for the message
+        color: backgroundColor,
         text: `*Incident ID:* ${incident.incident_id}\n` +
               `*User:* ${incident.user}\n` +
               `*Location:* ${incident.location}\n` +
@@ -392,34 +407,36 @@ function sendSlackNotification(incident, docId) {
   const options = {
     method: 'POST',
     contentType: 'application/json',
-    payload: JSON.stringify(payload)  // Send the payload as JSON to the Slack webhook
+    payload: JSON.stringify(payload)
   };
 
-  UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, options);  // Call the Slack webhook
+  UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, options); // Send to Slack
 }
+
 /**
- * Sends the email notification to stakeholders with incident details
+ * Send incident notification to all stakeholders as an HTML email.
+ * Includes summary, details, recommended actions, and investigation links.
  */
 function sendIncidentNotification(incident, docId, summary) {
   const logUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.LOG_SPREADSHEET_ID}/edit`;
   const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
   const sev = incident.severity.toLowerCase();
 
-  // Severity-based styles
+  // Styles for severity levels (background and border)
   const severityStyles = {
     high: 'background:#f8d7da;color:#721c24;border-left:5px solid #d32f2f;',
     medium: 'background:#fff3cd;color:#856404;border-left:5px solid #ff9800;',
     low: 'background:#d1ecf1;color:#0c5460;border-left:5px solid #2196f3;'
   };
 
-  // Security operations advice based on severity
+  // SecOps advice for each severity
   const secOpsAdvice = {
     high: `<ul><li>Immediately isolate the account or device.</li><li>Launch full investigation.</li><li>Notify compliance if data was accessed.</li></ul>`,
     medium: `<ul><li>Review logs and context.</li><li>Determine need for escalation.</li><li>Document findings.</li></ul>`,
     low: `<ul><li>Validate for false positives.</li><li>Continue monitoring.</li></ul>`
   };
 
-  // HTML body for the email notification (con dos botones grandes)
+  // Main HTML email body (customize as needed)
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px;">
       <h2 style="color: #d32f2f; border-bottom: 1px solid #eee;">Security Incident Notification</h2>
@@ -465,7 +482,6 @@ function sendIncidentNotification(incident, docId, summary) {
       </p>
     </div>`;
 
-  // Send the email notification to all stakeholders
   CONFIG.STAKEHOLDER_EMAILS.forEach(email =>
     sendEmail(
       email,
@@ -475,18 +491,18 @@ function sendIncidentNotification(incident, docId, summary) {
   );
 }
 
-
 /**
- * Utility to format ISO string into a readable time
+ * Format ISO8601 date string to a user-friendly format.
  */
 function formatDateTime(iso) {
-  return new Date(iso).toLocaleString();  // Converts ISO string to a readable time
+  return new Date(iso).toLocaleString();
 }
 
 /**
- * Logs activity to Stackdriver and optionally to a sheet
+ * Log activity (to Stackdriver Logger and optionally elsewhere).
+ * Use for debug, error, and audit messages.
  */
 function logActivity(msg, level = 'INFO') {
   const timestamp = new Date().toISOString();
-  Logger.log(`[${timestamp}] [${level}] ${msg}`);  // Log the message with the log level
+  Logger.log(`[${timestamp}] [${level}] ${msg}`);
 }
