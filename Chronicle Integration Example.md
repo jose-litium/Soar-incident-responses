@@ -1,10 +1,3 @@
-¡Ahora sí! Aquí tienes **TODO el contenido** en un **solo bloque Markdown**, sin repeticiones, bien formateado, limpio y autoexplicativo.
-Puedes copiar y pegar directamente este bloque en un solo archivo `.md` (por ejemplo, `CHRONICLE_RULES.md`).
-Incluye portada, explicación, reglas, instrucciones de uso y referencias.
-
----
-
-````markdown
 # Chronicle SIEM – Example YARA-L Rules for SOAR Integration
 
 **Author:** Jose Moreno  
