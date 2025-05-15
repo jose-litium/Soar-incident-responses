@@ -6,9 +6,9 @@ Below is a sample JSON payload representing a security incident. This format is 
 {
   "incident_id": "INC-20250513-114200",
   "timestamp": "2025-05-13T11:42:00Z",
-  "user": "john.error404@yougothack.com",
+  "user": "error404@Hacking.com",
   "login_ip": "196.251.72.142",
-  "location": "Ghana",
+  "location": "India",
   "mfa_used": true,
   "ioc_matched": true,
   "sensitive_data_accessed": true,
