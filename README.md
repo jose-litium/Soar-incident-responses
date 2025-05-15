@@ -22,7 +22,7 @@ Automated incident response and documentation for Google Workspace environments 
 - [Improvements and Ideas](improvements.md)
 - [License](License.md)
 - [Credits](Credits.md)
-- [Chronicle Integration](Chronicle_Integration_Example.md)
+- [Chronicle Integration](CHRONICLE_RULES.md)
 ---
 
 ## Description
@@ -102,7 +102,6 @@ All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.
 **Tip:**  
 Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
 
-
 ---
 
 ## High-Level Architecture Diagram
@@ -128,4 +127,29 @@ flowchart TD
     AppsScript -->|Email| Mailjet
     AppsScript -->|Alert| Slack
     AppsScript -->|Log| Logger
+Workflow Diagram
+Below is a workflow diagram representing the typical flow of a security incident through the automation:
 
+mermaid
+Copiar
+Editar
+flowchart LR
+    A[Detection/Alert<br>Chronicle SIEM,<br>cURL, Manual] --> B(Incident Intake<br>Apps Script Webhook)
+    B --> C{Incident Valid?}
+    C -- Yes --> D[Create Incident Doc<br>from Template]
+    D --> E[Log to Google Sheet]
+    D --> F[Send Email Notification<br>Mailjet/Gmail]
+    D --> G[Send Slack Alert]
+    F & G --> H[Stakeholder Response/Investigation]
+    E --> I[Update Sheet/Status]
+    H --> I
+    I --> J{Incident Closed?}
+    J -- No --> H
+    J -- Yes --> K[Closure & Review]
+
+    style H fill:#d1ecf1,stroke:#2196f3
+    style D fill:#f8d7da,stroke:#d32f2f
+    style F fill:#fff3cd,stroke:#ff9800
+    style E fill:#e0e0e0,stroke:#2196f3
+    style G fill:#d1ecf1,stroke:#2196f3
+    style K fill:#c8e6c9,stroke:#388e3c
