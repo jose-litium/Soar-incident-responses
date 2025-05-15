@@ -44,10 +44,27 @@ This project implements an **automated workflow** for managing and documenting s
 
 ```mermaid
 flowchart TD
-    Webhook["Webhook (HTTP POST)"] -->|Incident Data| AppsScript
-    Manual["Main() Manual"] --> AppsScript
-    AppsScript -->|Create Report| GoogleDocs["Google Docs (Report)"]
-    AppsScript -->|Log Entry| GoogleSheets["Google Sheets (Log)"]
-    AppsScript -->|Email| Mailjet["Mailjet / GmailApp"]
-    AppsScript -->|Alert| Slack["Slack (Webhook)"]
-    AppsScript -->|Stackdriver Logging| Logger
+    subgraph External Sources
+        CurlTest["curl Randomizer<br/>(Simulate webhook POSTs<br/>from random IPs)"]
+        Chronicle["Google Chronicle<br/>Automated<br/>(SIEM/SOAR integration)"]
+    end
+
+    CurlTest -->|Incident Data (HTTP POST)| AppsScript
+    Chronicle -->|Incident Data (Webhook/HTTP)| AppsScript
+
+    subgraph Google Workspace Automation
+        AppsScript["Google Apps Script<br/>(SOAR Logic)"]
+        GoogleDocs["Google Docs<br/>(Incident Report)"]
+        GoogleSheets["Google Sheets<br/>(Incident Log)"]
+        Mailjet["Mailjet<br/>(HTML Email)"]
+        Slack["Slack (Webhook)"]
+        Logger["Stackdriver Logging"]
+    end
+
+    AppsScript -->|Create Report| GoogleDocs
+    AppsScript -->|Log Entry| GoogleSheets
+    AppsScript -->|Email| Mailjet
+    AppsScript -->|Alert| Slack
+    AppsScript -->|Log| Logger
+
+    Manual["Manual Run (main function)"] --> AppsScript
