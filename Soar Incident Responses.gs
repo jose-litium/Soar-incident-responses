@@ -1,439 +1,492 @@
-/**
- * Incident Response Automation System
- * Version 2.0
- * 
- * This system automates the creation, documentation, and notification of security incidents.
- * It supports both manual execution via the main() function and automated processing via webhooks.
- * 
- * Key Features:
- * - Creates detailed incident reports from templates
- * - Generates executive summaries
- * - Sends notifications to stakeholders
- * - Maintains activity logs
- * - Supports both manual and automated incident creation
- */
-
+// Global configuration containing necessary values for incident processing
 const CONFIG = {
-  TEMPLATE_DOC_ID: 'REPLACE_WITH_YOUR_GOOGLE_DOC_TEMPLATE_ID',
-  STAKEHOLDER_EMAILS: ['security-team@example.com'],
-  CHAT_WEBHOOK_URL = 'https://chat.googleapis.com/v1/spaces/...'; // Replace with your Chat Webhook
-  INCIDENT_PREFIX: 'INC',
-  DOC_PREFIX: 'Incident Report - ',
-  LOG_SPREADSHEET_ID: '', // Optional for logging
-  REPLY_TO_EMAIL: 'soar-bot@company.com'
+  TEMPLATE_DOC_ID: 'TEMPLATE-ID', // Google Docs template ID
+  STAKEHOLDER_EMAILS: ['youremail@company.com'], // List of emails to notify
+  INCIDENT_PREFIX: 'INC', // Prefix for incident IDs
+  DOC_PREFIX: 'Incident Report - ', // Prefix for document names
+  LOG_SPREADSHEET_ID: 'SPREADSHEET-ID', // Google Sheets ID for logs
+  REPLY_TO_EMAIL: 'soar-bot@company.com',
+  SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/XXX', // Slack webhook
+  SLACK_GROUP_LINK: 'https://join.slack.com/...', // Slack group invite
+  FROM_EMAIL: 'sender@company.com', // Sender validated in Mailjet
+  FROM_NAME: 'Security Incident Bot',
+  USE_MAILJET: true
 };
 
 /**
- * Main function for manual execution
- * @returns {string} Processing status message
- * 
- * This is the entry point for manual execution. It creates a sample incident,
- * processes it through the full workflow, and returns a status message.
- * Used for testing and manual incident creation.
+ * Main function to simulate manual incident processing (testing only)
  */
 function main() {
   const incident = {
-    incident_id: generateIncidentId(),
-    timestamp: new Date().toISOString(),
-    user: 'john.error404@Yougothack.com',
-    login_ip: '196.251.72.142',
-    location: 'Ghana',
-    mfa_used: true,
-    ioc_matched: true,
-    sensitive_data_accessed: true,
-    severity: 'High',
-    status: 'Open',
+    incident_id: generateIncidentId(),  // Generate a unique ID for the incident
+    timestamp: new Date().toISOString(),  // Timestamp of the incident
+    user: 'criminals@company.com',  // User involved in the incident
+    login_ip: '101.206.168.120',  // IP address from where the login was made
+    location: 'India',  // Location of the incident
+    mfa_used: true,  // Whether multi-factor authentication (MFA) was used
+    ioc_matched: true,  // Whether an indicator of compromise (IOC) was matched
+    sensitive_data_accessed: true,  // Whether sensitive data was accessed
+    severity: 'High',  // Severity level of the incident
+    status: 'Open',  // Status of the incident
     timeline: [
-      {time: new Date().toISOString(), event: 'Initial login detected'},
-      {time: new Date().toISOString(), event: 'IOC match confirmed'}
+      { time: new Date().toISOString(), event: 'Initial login detected' },  // Event of initial login detection
+      { time: new Date().toISOString(), event: 'IOC match confirmed' }  // IOC match confirmed event
     ],
     actions_taken: [
-      'User account temporarily suspended',
-      'Endpoint isolation initiated'
+      'User account temporarily suspended',  // Action taken: suspend user account temporarily
+      'Endpoint isolation initiated'  // Action taken: initiate endpoint isolation
     ]
   };
-
-  try {
-    const docId = createIncidentReport(incident);
-    const summary = generateExecutiveSummary(incident);
-    insertSummaryToDoc(docId, summary, incident);
-    sendIncidentNotification(incident, docId, summary);
-    logActivity(`Incident ${incident.incident_id} processed successfully`);
-    return `Incident ${incident.incident_id} processed. Document ID: ${docId}`;
-  } catch (error) {
-    logActivity(`Error processing incident: ${error.message}`, 'ERROR');
-    throw error;
-  }
+    processIncident(incident);  // Process the incident
 }
 
 /**
- * Webhook endpoint for automated incident processing
- * @param {Object} e The event object from the POST request
- * @returns {TextOutput} JSON response with processing results
- * 
- * This function handles incoming webhook requests, processes the incident data,
- * and returns a JSON response. It's the entry point for automated integrations.
+ * Function for automated incident intake via HTTP POST (e.g., from curl or webhook)
  */
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
-
-    const incident = createIncidentFromData(data);
-    const docId = createIncidentReport(incident);
-    const summary = generateExecutiveSummary(incident);
-    insertSummaryToDoc(docId, summary, incident);
-    sendIncidentNotification(incident, docId, summary);
-
-    logActivity(`Webhook: Incident ${incident.incident_id} processed`);
-
+    const data = JSON.parse(e.postData.contents);  // Retrieve the data from the webhook
+    const incident = createIncidentFromData(data);  // Create an incident from the received data
+    processIncident(incident);  // Process the incident
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'success',
-      incident_id: incident.incident_id,
-      doc_url: `https://docs.google.com/document/d/${docId}/edit`,
-      summary: summary
+      status: 'success',  // Success response
+      incident_id: incident.incident_id  // Return the ID of the processed incident
     })).setMimeType(ContentService.MimeType.JSON);
-
   } catch (error) {
-    logActivity(`Webhook error: ${error.message}`, 'ERROR');
+    logActivity(`Webhook error: ${error.message}`, 'ERROR');  // Log the error
     return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
-      message: error.message
+      status: 'error',  // Error response
+      message: error.message  // Error message
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+/**
+ * Envía un correo HTML.  
+ * Usa Mailjet si está activado; si falla, recurre a GmailApp.
+ */
+function sendEmail(to, subject, html) {
+  if (CONFIG.USE_MAILJET) {
+    try {
+      sendViaMailjet(to, subject, html);
+      return;                               // salió bien → terminamos
+    } catch (err) {
+      logActivity('Mailjet falló: ' + err.message, 'WARN');
+    }
+  }
+  // Fallback a GmailApp (sigue sujeto al cupo de 100/día)
+  GmailApp.sendEmail(to, subject, '', {
+    htmlBody: html,
+    replyTo: CONFIG.REPLY_TO_EMAIL,
+    name: CONFIG.FROM_NAME
+  });
+}
 
-// ====================
-// HELPER FUNCTIONS
-// ====================
+/** Llamada de bajo nivel a la API de Mailjet */
+function sendViaMailjet(to, subject, html) {
+  const props  = PropertiesService.getScriptProperties();
+  const apiKey = props.getProperty('MAILJET_API_KEY');
+  const apiSec = props.getProperty('MAILJET_API_SECRET');
+  if (!apiKey || !apiSec) {
+    throw new Error('Faltan MAILJET_API_KEY / MAILJET_API_SECRET');
+  }
+
+  const payload = {
+    Messages: [{
+      From:    { Email: CONFIG.FROM_EMAIL, Name: CONFIG.FROM_NAME },
+      To:      [{ Email: to }],
+      Subject: subject,
+      HTMLPart: html
+    }]
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Basic ' + Utilities.base64Encode(apiKey + ':' + apiSec) },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  const resp = UrlFetchApp.fetch('https://api.mailjet.com/v3.1/send', options);
+  if (resp.getResponseCode() >= 400) {
+    throw new Error(resp.getContentText()); // hará que salte el fallback
+  }
+}
 
 /**
- * Creates an incident object from input data
- * @param {Object} data Raw incident data
- * @returns {Object} Standardized incident object
- * 
- * This function normalizes incoming data into a standardized incident structure,
- * filling in default values for any missing fields.
+ * Central function to process and handle a security incident
+ */
+function processIncident(incident) {
+  const docId = createIncidentReport(incident);  // Create the incident report
+  const summary = generateExecutiveSummary(incident);  // Generate an executive summary of the incident
+  insertSummaryToDoc(docId, summary, incident);  // Insert the summary into the report
+  sendIncidentNotification(incident, docId, summary);  // Send email notifications
+  sendSlackNotification(incident, docId);  // Send a Slack notification
+  logIncidentToSheet(incident, docId);  // Log the incident to the spreadsheet
+  logActivity(`Processed incident ${incident.incident_id}`);  // Log the activity of processing
+}
+
+/**
+ * Converts raw data into a structured incident object
  */
 function createIncidentFromData(data) {
   return {
-    incident_id: data.incident_id || generateIncidentId(),
-    timestamp: data.timestamp || new Date().toISOString(),
-    user: data.user || 'unknown@company.com',
-    login_ip: data.login_ip || '0.0.0.0',
-    location: data.location || 'Unknown',
-    mfa_used: data.mfa_used || false,
-    ioc_matched: data.ioc_matched || false,
-    sensitive_data_accessed: data.sensitive_data_accessed || false,
-    severity: data.severity || 'Medium',
-    status: data.status || 'Open',
-    timeline: data.timeline || [],
-    actions_taken: data.actions_taken || []
+    incident_id: data.incident_id || generateIncidentId(),  // Incident ID
+    timestamp: data.timestamp || new Date().toISOString(),  // Timestamp of the incident
+    user: data.user || 'unknown@company.com',  // User involved
+    login_ip: data.login_ip || '0.0.0.0',  // Login IP address
+    location: data.location || 'Unknown',  // Location of the incident
+    mfa_used: data.mfa_used || false,  // Whether MFA was used
+    ioc_matched: data.ioc_matched || false,  // Whether IOC was matched
+    sensitive_data_accessed: data.sensitive_data_accessed || false,  // Whether sensitive data was accessed
+    severity: data.severity || 'Medium',  // Severity of the incident
+    status: data.status || 'Open',  // Status of the incident
+    timeline: data.timeline || [],  // Event timeline
+    actions_taken: data.actions_taken || []  // Actions taken during the incident
   };
 }
 
 /**
- * Generates a unique incident ID
- * @returns {string} Formatted incident ID (e.g., INC-20230515-093045)
- * 
- * Creates a timestamp-based unique identifier for incidents using the format:
- * PREFIX-YYYYMMDD-HHMMSS
+ * Generates a unique incident ID based on the timestamp
  */
 function generateIncidentId() {
-  const date = new Date();
-  return `${CONFIG.INCIDENT_PREFIX}-${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  const d = new Date();
+  return `${CONFIG.INCIDENT_PREFIX}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 /**
- * Pads numbers with leading zeros
- * @param {number} num Number to pad
- * @returns {string} Zero-padded string (2 digits)
- * 
- * Utility function for formatting date/time components in IDs.
+ * Helper function to add leading zeros to single-digit numbers
  */
-function pad(num) {
-  return num.toString().padStart(2, '0');
+function pad(n) {
+  return n.toString().padStart(2, '0');
 }
 
 /**
- * Creates an incident report document from a template
- * @param {Object} incident Incident data
- * @returns {string} ID of the created Google Doc
- * @throws {Error} If document creation fails
- * 
- * This function:
- * 1. Copies a template document
- * 2. Replaces placeholder text with incident data
- * 3. Saves and returns the new document ID
+ * Creates a new document from a template and replaces placeholders
  */
 function createIncidentReport(incident) {
-  try {
-    const templateFile = DriveApp.getFileById(CONFIG.TEMPLATE_DOC_ID);
-    const newFileName = `${CONFIG.DOC_PREFIX}${incident.incident_id}`;
-    const newFile = templateFile.makeCopy(newFileName);
-    const docId = newFile.getId();
-    const document = DocumentApp.openById(docId);
-    const body = document.getBody();
+  const copy = DriveApp.getFileById(CONFIG.TEMPLATE_DOC_ID).makeCopy(`${CONFIG.DOC_PREFIX}${incident.incident_id}`);  // Create a copy of the template document
+  const docId = copy.getId();  // Get the ID of the new document
+  const doc = DocumentApp.openById(docId);  // Open the document
+  const body = doc.getBody();  // Get the body of the document
 
-    // Replace template placeholders
-    const replacements = {
-      '{{INCIDENT_ID}}': incident.incident_id,
-      '{{TIMESTAMP}}': incident.timestamp,
-      '{{USER}}': incident.user,
-      '{{LOGIN_IP}}': incident.login_ip,
-      '{{LOCATION}}': incident.location,
-      '{{MFA_USED}}': incident.mfa_used ? 'Yes' : 'No',
-      '{{IOC_MATCHED}}': incident.ioc_matched ? 'Yes' : 'No',
-      '{{SENSITIVE_DATA}}': incident.sensitive_data_accessed ? 'Yes' : 'No',
-      '{{SEVERITY}}': incident.severity,
-      '{{STATUS}}': incident.status
-    };
+  // Replace placeholders in the template with actual values
+  const map = {
+    '{{INCIDENT_ID}}': incident.incident_id,
+    '{{TIMESTAMP}}': incident.timestamp,
+    '{{USER}}': incident.user,
+    '{{LOGIN_IP}}': incident.login_ip,
+    '{{LOCATION}}': incident.location,
+    '{{MFA_USED}}': incident.mfa_used ? 'Yes' : 'No',
+    '{{IOC_MATCHED}}': incident.ioc_matched ? 'Yes' : 'No',
+    '{{SENSITIVE_DATA}}': incident.sensitive_data_accessed ? 'Yes' : 'No',
+    '{{SEVERITY}}': incident.severity,
+    '{{STATUS}}': incident.status
+  };
 
-    Object.entries(replacements).forEach(([key, value]) => {
-      body.replaceText(key, value);
-    });
-
-    document.saveAndClose();
-    logActivity(`Created incident report: ${docId}`);
-    return docId;
-  } catch (error) {
-    logActivity(`Error creating report: ${error.message}`, 'ERROR');
-    throw new Error(`Failed to create incident report: ${error.message}`);
-  }
+  // Perform the replacement of placeholders with actual data
+  Object.entries(map).forEach(([key, value]) => body.replaceText(key, value));
+  doc.saveAndClose();  // Save and close the document
+  return docId;  // Return the document ID
 }
 
-/**
- * Generates an executive summary from incident data
- * @param {Object} incident Incident data
- * @returns {string} Formatted summary paragraph
- * 
- * Creates a human-readable summary of the incident suitable for leadership communication.
- */
-function generateExecutiveSummary(incident) {
-  return `A security alert was triggered for user ${incident.user} due to a login from ${incident.location}. ` +
-    `Although MFA was ${incident.mfa_used ? 'used' : 'not used'}, the login IP (${incident.login_ip}) ` +
-    `${incident.ioc_matched ? 'matched a known IOC' : 'did not match known IOCs'}. ` +
-    `The user was ${incident.sensitive_data_accessed ? 'accessing' : 'not accessing'} sensitive data. ` +
-    `Incident severity is ${incident.severity}. A formal incident response has been initiated.`;
-}
-
-/**
- * Inserts detailed incident information into a document
- * @param {string} docId Google Doc ID
- * @param {string} summary Executive summary text
- * @param {Object} incident Incident data
- * @throws {Error} If document update fails
- * 
- * This function completely formats the incident document with:
- * - Title and summary
- * - Detailed incident information in a table
- * - Timeline of events
- * - Actions taken
- */
+// Updated insertSummaryToDoc with clickable links and severity‑specific action lists
 function insertSummaryToDoc(docId, summary, incident) {
-  try {
-    const document = DocumentApp.openById(docId);
-    const body = document.getBody();
+  const doc = DocumentApp.openById(docId);
+  const body = doc.getBody();
+  body.clear();
 
-    // Clear any existing placeholder text
-    body.clear();
-
-    // Insert formatted content
-    body.insertParagraph(0, 'INCIDENT REPORT')
+  // Title
+  body.insertParagraph(0, 'INCIDENT REPORT')
       .setHeading(DocumentApp.ParagraphHeading.TITLE)
       .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
-    body.insertParagraph(1, 'Executive Summary')
-      .setHeading(DocumentApp.ParagraphHeading.HEADING1);
-    body.insertParagraph(2, summary);
+  // Executive summary
+  body.appendParagraph('Executive Summary').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  body.appendParagraph(summary);
 
-    // Incident Details
-    body.insertParagraph(3, 'Incident Details')
+  // Incident details table
+  body.appendParagraph('Incident Details').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  const table = body.appendTable([
+    ['Incident ID:', incident.incident_id],
+    ['Timestamp:', incident.timestamp],
+    ['User:', incident.user],
+    ['Login IP:', incident.login_ip],
+    ['Location:', incident.location],
+    ['MFA Used:', incident.mfa_used ? 'Yes' : 'No'],
+    ['IOC Matched:', incident.ioc_matched ? 'Yes' : 'No'],
+    ['Sensitive Data:', incident.sensitive_data_accessed ? 'Yes' : 'No'],
+    ['Severity:', incident.severity],
+    ['Status:', incident.status]
+  ]);
+  for (let r = 0; r < table.getNumRows(); r++) {
+    table.getRow(r).getCell(0).setBold(true);
+  }
+
+  // Timeline
+  body.appendParagraph('Timeline').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  (incident.timeline || []).forEach(e =>
+    body.appendListItem(`${formatDateTime(e.time)}: ${e.event}`));
+
+  // Actions taken
+  body.appendParagraph('Actions Taken').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  (incident.actions_taken || []).forEach(a => body.appendListItem(a));
+
+  // Recommended actions based on severity
+  const actions = getSeverityActionsArray(incident.severity);
+  body.appendParagraph('Recommended SecOps Actions (EU)')
       .setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    
-    const detailsTable = body.appendTable([
-      ['Incident ID:', incident.incident_id],
-      ['Timestamp:', incident.timestamp],
-      ['User:', incident.user],
-      ['Login IP:', incident.login_ip],
-      ['Location:', incident.location],
-      ['MFA Used:', incident.mfa_used ? 'Yes' : 'No'],
-      ['IOC Matched:', incident.ioc_matched ? 'Yes' : 'No'],
-      ['Sensitive Data:', incident.sensitive_data_accessed ? 'Yes' : 'No'],
-      ['Severity:', incident.severity],
-      ['Status:', incident.status]
-    ]);
-    
-    // Format table
-    const style = {};
-    style[DocumentApp.Attribute.BOLD] = true;
-    style[DocumentApp.Attribute.FOREGROUND_COLOR] = '#3366CC';
-    
-    for (let row = 0; row < detailsTable.getNumRows(); row++) {
-      detailsTable.getRow(row).getCell(0).setAttributes(style);
-    }
+  body.appendParagraph(actions.title)
+      .setHeading(DocumentApp.ParagraphHeading.HEADING3);
+  actions.items.forEach(i => body.appendListItem(i));
 
-    // Timeline
-    body.appendParagraph('Timeline')
-      .setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    
-    if (incident.timeline && incident.timeline.length > 0) {
-      incident.timeline.forEach(event => {
-        body.appendListItem(`${formatDateTime(event.time)}: ${event.event}`);
-      });
-    } else {
-      body.appendParagraph('No timeline events recorded yet.');
-    }
+  // Investigation links (clickable)
+  body.appendParagraph('Investigation Links').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  const links = [
+    ['VirusTotal', `https://www.virustotal.com/gui/ip-address/${incident.login_ip}`],
+    ['IP Info', `https://ipinfo.io/${incident.login_ip}`],
+    ['AbuseIPDB', `https://www.abuseipdb.com/check/${incident.login_ip}`]
+  ];
+  links.forEach(([label, url]) => {
+    const li = body.appendListItem(label);
+    li.setLinkUrl(url);
+  });
 
-    // Actions Taken
-    body.appendParagraph('Actions Taken')
-      .setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    
-    if (incident.actions_taken && incident.actions_taken.length > 0) {
-      incident.actions_taken.forEach(action => {
-        body.appendListItem(action);
-      });
-    } else {
-      body.appendParagraph('No actions recorded yet.');
-    }
+  // EU compliance checklist
+  body.appendParagraph('EU Compliance Checklist').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendTable([
+    ['Requirement', 'Completed (Y/N)', 'Notes'],
+    ['GDPR Art. 33 – Supervisory‑authority notification within 72h', '', ''],
+    ['GDPR Art. 34 – Data‑subject notification (if high risk)', '', ''],
+    ['NIS2 – National CSIRT notification (if applicable)', '', ''],
+    ['Records updated in Register of Processing Activities (RoPA)', '', ''],
+    ['DPO sign‑off obtained', '', '']
+  ]);
 
-    document.saveAndClose();
-    logActivity(`Updated document ${docId} with incident details`);
-  } catch (error) {
-    logActivity(`Error updating document: ${error.message}`, 'ERROR');
-    throw new Error(`Failed to update incident document: ${error.message}`);
+  // Follow‑up tasks
+  body.appendParagraph('Follow‑Up Tasks & Deadlines').setHeading(DocumentApp.ParagraphHeading.HEADING2);
+  body.appendListItem('DD‑MMM‑YYYY – Complete endpoint forensic report');
+  body.appendListItem('DD‑MMM‑YYYY – Review IAM policies for affected user');
+  body.appendListItem('DD‑MMM‑YYYY – Conduct post‑incident lessons‑learned session');
+  body.appendListItem('DD‑MMM‑YYYY – Close incident after post‑mortem');
+
+  doc.saveAndClose();
+}
+
+/**
+ * Returns the heading title and bullet list of recommended actions
+ * matching the severity level.
+ * @param {string} sev Incident severity
+ * @return {{title:string, items:string[]}}
+ */
+function getSeverityActionsArray(sev) {
+  switch (sev.toLowerCase()) {
+    case 'high':
+    case 'hight': // accommodate common typo
+    case 'critical':
+      return {
+        title: 'High Severity (Critical)',
+        items: [
+          'Immediately block the offending IP address at all ingress points.',
+          'Disable or suspend the user account/device involved.',
+          'Launch a full forensic acquisition of endpoint(s) and cloud logs.',
+          'Assess the likelihood of personal-data exfiltration under GDPR Art. 34.',
+          'Notify the organisation’s Data Protection Officer (DPO).',
+          'If personal data are at risk, prepare a 72‑hour breach notification draft for the competent EU supervisory authority (GDPR Art. 33) and affected data subjects.',
+          'Escalate to law‑enforcement or CERT‑EU if criminal activity is suspected.'
+        ]
+      };
+    case 'medium':
+      return {
+        title: 'Medium Severity',
+        items: [
+          'Perform a targeted log review (identity, network, SaaS).',
+          'Correlate IOC hits with threat‑intel feeds; decide if containment is required.',
+          'Engage the Incident Response (IR) team for a scoping call.',
+          'If any personal data may be involved, alert the DPO for GDPR impact assessment.',
+          'Document all findings in the incident tracker.'
+        ]
+      };
+    default:
+      return {
+        title: 'Low Severity',
+        items: [
+          'Validate for false positives; tune detection rules if needed.',
+          'Keep the user/session under heightened monitoring for 14 days.',
+          'Record outcome and close or re‑classify if risk increases.'
+        ]
+      };
   }
 }
 
 /**
- * Sends email notifications to stakeholders
- * @param {Object} incident Incident data
- * @param {string} docId Google Doc ID
- * @param {string} summary Executive summary
- * @throws {Error} If email sending fails
- * 
- * Sends formatted HTML emails to all configured stakeholders with:
- * - Incident overview
- * - Key details table
- * - Link to full report
+ * Generates an executive summary for emails or reports
+ */
+function generateExecutiveSummary(incident) {
+  return `A security alert was triggered for user ${incident.user} from ${incident.location}. ` +
+    `MFA was ${incident.mfa_used ? 'used' : 'not used'}, and the IP (${incident.login_ip}) ` +
+    `${incident.ioc_matched ? 'matched a known IOC' : 'did not match known IOCs'}. ` +
+    `Sensitive data was ${incident.sensitive_data_accessed ? '' : 'not '}accessed. ` +
+    `Severity level is ${incident.severity}.`;  // Return the executive summary string
+}
+
+/**
+ * Logs incident details to a Google Sheets spreadsheet
+ */
+function logIncidentToSheet(incident, docId) {
+  const sheet = SpreadsheetApp.openById(CONFIG.LOG_SPREADSHEET_ID).getSheets()[0];  // Open the spreadsheet
+  sheet.appendRow([
+    incident.incident_id,
+    incident.timestamp,
+    incident.user,
+    incident.login_ip,
+    incident.location,
+    incident.mfa_used ? 'Yes' : 'No',
+    incident.ioc_matched ? 'Yes' : 'No',
+    incident.sensitive_data_accessed ? 'Yes' : 'No',
+    incident.severity,
+    incident.status,
+    `https://docs.google.com/document/d/${docId}/edit`,  // Link to the generated report
+    new Date().toISOString()  // Timestamp of the log
+  ]);
+}
+
+/**
+ * Sends a notification to a configured Slack channel
+ */
+function sendSlackNotification(incident, docId) {
+  // Define the colors for different severity levels
+  const severityColors = {
+    high: '#f8d7da',   // Red background for High severity
+    medium: '#fff3cd', // Yellow background for Medium severity
+    low: '#d1ecf1'     // Blue background for Low severity
+  };
+
+  // Define the icons for each severity level
+  const severityIcons = {
+    high: ':fire:',
+    medium: ':warning:',
+    low: ':information_source:'
+  };
+
+  // Set the background color based on the severity
+  const severity = incident.severity.toLowerCase();
+  const backgroundColor = severityColors[severity] || '#d1ecf1';  // Default to blue if severity is not recognized
+  const icon = severityIcons[severity] || ':information_source:';  // Default to info icon
+
+  const payload = {
+    text: `${icon} *${incident.severity}* Security Incident Detected`,
+    attachments: [
+      {
+        color: backgroundColor, // Set the color for the message
+        text: `*Incident ID:* ${incident.incident_id}\n` +
+              `*User:* ${incident.user}\n` +
+              `*Location:* ${incident.location}\n` +
+              `*Login IP:* ${incident.login_ip}\n` +
+              `<https://docs.google.com/document/d/${docId}/edit|View Incident Report>\n\n` +
+              `For detailed logs, join our Slack group: <${CONFIG.SLACK_GROUP_LINK}|Slack Group>`
+      }
+    ]
+  };
+
+  const options = {
+    method: 'POST',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload)  // Send the payload as JSON to the Slack webhook
+  };
+
+  UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, options);  // Call the Slack webhook
+}
+/**
+ * Sends the email notification to stakeholders with incident details
  */
 function sendIncidentNotification(incident, docId, summary) {
-  try {
-    const url = `https://docs.google.com/document/d/${docId}/edit`;
-    const subject = `${CONFIG.INCIDENT_PREFIX} Notification: ${incident.incident_id} (${incident.severity})`;
-    
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #d32f2f;">Security Incident Notification</h2>
-        
-        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-          <h3 style="margin-top: 0;">${incident.incident_id}</h3>
-          <p><strong>Severity:</strong> <span style="color: ${getSeverityColor(incident.severity)}">${incident.severity}</span></p>
-          <p><strong>Status:</strong> ${incident.status}</p>
-        </div>
-        
-        <h3>Executive Summary</h3>
-        <p>${summary}</p>
-        
-        <h3>Key Details</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background: #e0e0e0;">
-            <th style="text-align: left; padding: 8px;">Field</th>
-            <th style="text-align: left; padding: 8px;">Value</th>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>User</strong></td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${incident.user}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Login IP</strong></td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${incident.login_ip}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Location</strong></td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${incident.location}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>MFA Used</strong></td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${incident.mfa_used ? 'Yes' : 'No'}</td>
-          </tr>
-        </table>
-        
-        <div style="margin-top: 20px; text-align: center;">
-          <a href="${url}" style="background: #4285f4; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block;">
-            View Full Incident Report
-          </a>
-        </div>
-        
-        <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
-          This is an automated notification. Please do not reply directly to this email.
-        </p>
-      </div>
-    `;
+  const logUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.LOG_SPREADSHEET_ID}/edit`;
+  const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
+  const sev = incident.severity.toLowerCase();
 
-    CONFIG.STAKEHOLDER_EMAILS.forEach(email => {
-      GmailApp.sendEmail(email, subject, '', {
-        htmlBody: htmlBody,
-        replyTo: CONFIG.REPLY_TO_EMAIL,
-        name: 'Security Incident Bot'
-      });
-      logActivity(`Sent notification to ${email}`);
-    });
-  } catch (error) {
-    logActivity(`Error sending notification: ${error.message}`, 'ERROR');
-    throw new Error(`Failed to send notifications: ${error.message}`);
-  }
-}
-
-/**
- * Gets color code for severity level
- * @param {string} severity Severity level (Critical/High/Medium/Low)
- * @returns {string} Hex color code
- * 
- * Used for visual indicators in notifications and reports.
- */
-function getSeverityColor(severity) {
-  const colors = {
-    'Critical': '#d32f2f',
-    'High': '#ff5722',
-    'Medium': '#ff9800',
-    'Low': '#4caf50'
+  // Severity-based styles
+  const severityStyles = {
+    high: 'background:#f8d7da;color:#721c24;border-left:5px solid #d32f2f;',
+    medium: 'background:#fff3cd;color:#856404;border-left:5px solid #ff9800;',
+    low: 'background:#d1ecf1;color:#0c5460;border-left:5px solid #2196f3;'
   };
-  return colors[severity] || '#607d8b';
+
+  // Security operations advice based on severity
+  const secOpsAdvice = {
+    high: `<ul><li>Immediately isolate the account or device.</li><li>Launch full investigation.</li><li>Notify compliance if data was accessed.</li></ul>`,
+    medium: `<ul><li>Review logs and context.</li><li>Determine need for escalation.</li><li>Document findings.</li></ul>`,
+    low: `<ul><li>Validate for false positives.</li><li>Continue monitoring.</li></ul>`
+  };
+
+  // HTML body for the email notification (con dos botones grandes)
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px;">
+      <h2 style="color: #d32f2f; border-bottom: 1px solid #eee;">Security Incident Notification</h2>
+      <div style="${severityStyles[sev]}; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>Incident ID: ${incident.incident_id}</h3>
+        <p><strong>Severity:</strong> ${incident.severity}</p>
+        <p><strong>Status:</strong> ${incident.status}</p>
+      </div>
+      <h3>Executive Summary</h3>
+      <p>${summary}</p>
+      <h3>Key Details</h3>
+      <table style="width:100%; border-collapse: collapse;">
+        <tr style="background:#e0e0e0;"><th style="padding:8px;">Field</th><th style="padding:8px;">Value</th></tr>
+        <tr><td style="padding:8px;">User</td><td style="padding:8px;">${incident.user}</td></tr>
+        <tr><td style="padding:8px;">Login IP</td><td style="padding:8px;">${incident.login_ip}</td></tr>
+        <tr><td style="padding:8px;">Location</td><td style="padding:8px;">${incident.location}</td></tr>
+        <tr><td style="padding:8px;">MFA Used</td><td style="padding:8px;">${incident.mfa_used ? 'Yes' : 'No'}</td></tr>
+      </table>
+      <h3>Recommended Actions for SecOps</h3>
+      <div style="background: #f4f6f7; padding: 15px; border-left: 4px solid #999; border-radius: 4px; margin-bottom: 20px;">
+        ${secOpsAdvice[sev]}
+      </div>
+      <h3>Investigate IP Address</h3>
+      <div style="text-align:center; margin: 15px 0;">
+        <a href="https://www.virustotal.com/gui/ip-address/${incident.login_ip}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
+        <a href="https://ipinfo.io/${incident.login_ip}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
+        <a href="https://www.abuseipdb.com/check/${incident.login_ip}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
+      </div>
+      <div style="text-align:center;margin-top:30px;">
+        <a href="${docUrl}" 
+           style="display:inline-block;background:#5e35b1;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" 
+           target="_blank">
+          📄 View Full Incident Report
+        </a>
+        <a href="${logUrl}" 
+           style="display:inline-block;background:#388e3c;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" 
+           target="_blank">
+          📝 View Incident Log Spreadsheet
+        </a>
+      </div>
+      <p style="margin-top: 36px; text-align: center; font-size: 0.93em; color: #777;">
+        This is an automated alert. Do not reply.
+      </p>
+    </div>`;
+
+  // Send the email notification to all stakeholders
+  CONFIG.STAKEHOLDER_EMAILS.forEach(email =>
+    sendEmail(
+      email,
+      `Incident Alert: ${incident.incident_id} (${incident.severity})`,
+      htmlBody
+    )
+  );
+}
+
+
+/**
+ * Utility to format ISO string into a readable time
+ */
+function formatDateTime(iso) {
+  return new Date(iso).toLocaleString();  // Converts ISO string to a readable time
 }
 
 /**
- * Formats ISO date string to local format
- * @param {string} isoString ISO date string
- * @returns {string} Formatted local date/time string
- * 
- * Utility function for displaying dates in a human-readable format.
+ * Logs activity to Stackdriver and optionally to a sheet
  */
-function formatDateTime(isoString) {
-  const date = new Date(isoString);
-  return date.toLocaleString();
-}
-
-/**
- * Logs system activity
- * @param {string} message Log message
- * @param {string} level Log level (INFO/ERROR)
- * 
- * Writes log entries to both the Logger and optionally to a spreadsheet.
- * Helps with debugging and auditing system activity.
- */
-function logActivity(message, level = 'INFO') {
+function logActivity(msg, level = 'INFO') {
   const timestamp = new Date().toISOString();
-  const logEntry = `[${timestamp}] [${level}] ${message}`;
-  
-  Logger.log(logEntry);
-  
-  if (CONFIG.LOG_SPREADSHEET_ID) {
-    try {
-      const sheet = SpreadsheetApp.openById(CONFIG.LOG_SPREADSHEET_ID)
-        .getSheets()[0];
-      sheet.appendRow([timestamp, level, message]);
-    } catch (e) {
-      Logger.log('Failed to write to log spreadsheet: ' + e.message);
-    }
-  }
+  Logger.log(`[${timestamp}] [${level}] ${msg}`);  // Log the message with the log level
 }
