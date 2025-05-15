@@ -44,27 +44,22 @@ This project implements an **automated workflow** for managing and documenting s
 
 ```mermaid
 flowchart TD
-    subgraph External Sources
-        CurlTest["curl Randomizer<br/>(Simulate webhook POSTs<br/>from random IPs)"]
-        Chronicle["Google Chronicle<br/>Automated<br/>(SIEM/SOAR integration)"]
-    end
+    CurlTest["curl Randomizer (simulate POSTs with random IPs)"]
+    Chronicle["Google Chronicle (SIEM/SOAR)"]
+    Manual["Manual Run (main function)"]
+    AppsScript["Google Apps Script (SOAR Logic)"]
+    GoogleDocs["Google Docs (Incident Report)"]
+    GoogleSheets["Google Sheets (Incident Log)"]
+    Mailjet["Mailjet (HTML Email)"]
+    Slack["Slack (Webhook)"]
+    Logger["Stackdriver Logging"]
 
-    CurlTest -->|Incident Data (HTTP POST)| AppsScript
-    Chronicle -->|Incident Data (Webhook/HTTP)| AppsScript
-
-    subgraph Google Workspace Automation
-        AppsScript["Google Apps Script<br/>(SOAR Logic)"]
-        GoogleDocs["Google Docs<br/>(Incident Report)"]
-        GoogleSheets["Google Sheets<br/>(Incident Log)"]
-        Mailjet["Mailjet<br/>(HTML Email)"]
-        Slack["Slack (Webhook)"]
-        Logger["Stackdriver Logging"]
-    end
+    CurlTest -->|POST Incident Data| AppsScript
+    Chronicle -->|Webhook Incident| AppsScript
+    Manual --> AppsScript
 
     AppsScript -->|Create Report| GoogleDocs
     AppsScript -->|Log Entry| GoogleSheets
-    AppsScript -->|Email| Mailjet
+    AppsScript -->|Send Email| Mailjet
     AppsScript -->|Alert| Slack
     AppsScript -->|Log| Logger
-
-    Manual["Manual Run (main function)"] --> AppsScript
