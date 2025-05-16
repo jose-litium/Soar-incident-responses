@@ -104,26 +104,42 @@ Start by reading the [Configuration](Configuration.md) and [Installation and Usa
 
 ---
 
-## High-Level Architecture Diagram
-
-```mermaid
 flowchart TD
-    CurlTest["curl Randomizer"]
-    Chronicle["Chronicle SIEM"]
-    Manual["Manual Run"]
-    AppsScript["Apps Script"]
-    GoogleDocs["Docs (Report)"]
-    GoogleSheets["Sheets (Log)"]
-    Mailjet["Mailjet"]
-    Slack["Slack"]
-    Logger["Logger"]
+    A[Incident Intake (Webhook/cURL/Manual)] --> B{Is IP in IOC list?}
+    B -- Yes --> C{Was MFA used?}
+    B -- No --> D{Was MFA used?}
 
-    CurlTest -->|POST| AppsScript
-    Chronicle -->|Webhook| AppsScript
-    Manual --> AppsScript
+    %% --- IOC Branch ---
+    C -- No --> E[Actionable Incident]
+    C -- Yes --> F[Actionable Incident]
+    E --> G[Generate Doc Report]
+    E --> H[Send Email/Slack (Severity: Open)]
+    E --> I[Log as Open]
+    F --> G
+    F --> H
+    F --> I
+    %% --- Non-IOC Branch ---
+    D -- No --> J[Actionable Incident]
+    D -- Yes --> K[Informational Only]
+    J --> G
+    J --> H
+    J --> I
+    K --> L[Generate Doc Report]
+    K --> M[Send Email/Slack (Banner: Informational, Status: Closed)]
+    K --> N[Log as Closed]
 
-    AppsScript -->|Report| GoogleDocs
-    AppsScript -->|Log| GoogleSheets
-    AppsScript -->|Email| Mailjet
-    AppsScript -->|Alert| Slack
-    AppsScript -->|Log| Logger
+    %% Merge points for documentation
+    G --> O[Google Doc Link]
+    I --> O
+    L --> O
+    N --> O
+    H --> O
+    M --> O
+
+    style K fill:#fafbfc,stroke:#777,stroke-width:1.5px
+    style M fill:#f1f2f6,stroke:#888,stroke-dasharray: 5 5
+    style N fill:#f1f2f6,stroke:#888,stroke-dasharray: 5 5
+
+    %% Labels
+    classDef info fill:#f1f2f6,stroke:#888;
+    class K,M,N info
