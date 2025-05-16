@@ -102,16 +102,16 @@ All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.
 **Tip:**  
 Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
 
----
+```mermaid 
 flowchart TD
     Start([Incident Intake<br/>(Webhook / cURL / Manual)])
     Start --> CheckIOC{Is IP in IOC List?}
-    
+
     %% IOC in list
     CheckIOC -- "Yes" --> IOC_MFA{Was MFA used?}
     IOC_MFA -- "No" --> Actionable1[Actionable Incident<br/>(IOC, no MFA)]
     IOC_MFA -- "Yes" --> Actionable2[Actionable Incident<br/>(IOC, MFA used)]
-    
+
     %% IOC not in list
     CheckIOC -- "No" --> NonIOC_MFA{Was MFA used?}
     NonIOC_MFA -- "No" --> Actionable3[Actionable Incident<br/>(No IOC, no MFA)]
