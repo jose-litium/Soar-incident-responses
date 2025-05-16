@@ -1,6 +1,6 @@
 # SOAR Incident Response Automation
 
-Automated incident response and documentation for Google Workspace environments using Google Apps Script, Docs, Sheets, Mailjet, and Slack.
+Automated incident intake, response, documentation, and notification for Google Workspace environments using Google Apps Script, Google Docs, Google Sheets, Mailjet, and Slack.
 
 <div align="center">
 <img src="https://img.shields.io/badge/Automation-Google%20Apps%20Script-blue" alt="Google Apps Script"/>
@@ -12,175 +12,192 @@ Automated incident response and documentation for Google Workspace environments 
 
 ## Table of Contents
 
-- [Description](#description)
-- [Architecture](Architecture.md)
-- [Code Structure](Code%20Structure.md)
-- [Configuration](Configuration.md)
-- [Installation and Usage](Installation%20and%20Usage.md)
-- [Sample Google Docs Template](Sample%20Google%20Docs%20Template%20(Recommended%20Structure).md)
-- [Mock Incident JSON Example](mock_incident-json.MD)
-- [Improvements and Ideas](improvements.md)
-- [License](License.md)
-- [Credits](Credits.md)
-- [Chronicle Integration](CHRONICLE_RULES.md)
+- [Overview](#overview)
+- [Features](#features)
+- [How It Works: Data & Automation Flow](#how-it-works-data--automation-flow)
+- [Architecture](#architecture)
+- [Function Reference](#function-reference)
+- [Configuration](#configuration)
+- [Installation & Usage](#installation--usage)
+- [Templates & Examples](#templates--examples)
+- [Extending & Integrating](#extending--integrating)
+- [Improvements & Roadmap](#improvements--roadmap)
+- [License & Credits](#license--credits)
+
 ---
 
-## Description
+## Overview
 
-**SOAR Incident Response Automation** is a workflow for orchestrating security incident response: it automates incident intake, reporting, notifications, and logging via Google Apps Script, Google Docs, Sheets, Mailjet, and Slack.
+**SOAR Incident Response Automation** is an open-source automation workflow for orchestrating security incident response within Google Workspace (GWS/GCP) organizations.
 
-**Key features:**
+This system automates:
+- **Incident intake** (webhook/HTTP, cURL, or manual trigger)
+- **IOC (indicator) matching**
+- **Documented reporting (Google Docs)**
+- **Stakeholder notification (Mailjet/Gmail, Slack)**
+- **Centralized logging (Google Sheets)**
+- **Optional response triggers (EDR, Chronicle, firewall integration)**
 
-- Intake via webhook/HTTP POST (SIEM), cURL (simulation), or manual trigger.
-- Automated Google Docs report creation (using your own template).
-- Email notifications to stakeholders via Mailjet (with Gmail fallback).
-- Slack notifications with direct report/log links and severity color-coding.
-- Logging in a centralized Google Sheet.
-- Easily extensible and configurable for your needs.
+Ideal for SOC teams, IT admins, and GCP-native organizations seeking fast, auditable, no-infrastructure automation.
+
+---
+
+## Features
+
+- **Multi-channel intake:** Webhook/HTTP POST from SIEM/EDR, cURL simulation, or manual test trigger.
+- **IOC matching:** Automated comparison against latest FireHOL/blocklist data.
+- **Automatic reporting:** Generates structured Google Docs from a customizable template.
+- **Stakeholder notifications:** Notifies via Mailjet or Gmail fallback, and Slack (with severity color, live links).
+- **Centralized logging:** Every incident, actionable or informational, is logged in a Google Sheet.
+- **Easy to extend:** Modular config for Slack, Mailjet, or other integrations.
+- **Auditable:** Full workflow logs for compliance and monitoring.
+- **Supports Chronicle/EDR/firewall response triggers** (via API integration or playbook expansion).
+
+---
+
+## How It Works: Data & Automation Flow
+
+1. **Intake (Webhook / cURL / Manual)**
+    - Incident is submitted via HTTP POST, cURL, or the built-in `main()` Apps Script function (for tests).
+    - All incident attributes (user, IP, source, severity, etc.) are parsed and normalized.
+
+2. **IOC (Indicator of Compromise) Check**
+    - The source IP is checked against the latest IOC (blocklist) data (e.g., FireHOL Level 1).
+    - If a match or if escalation logic applies (suspicious login, sensitive access, etc.), the system triggers the *actionable incident* workflow.
+
+3. **Incident Documentation & Logging**
+    - A new Google Doc is created from the incident template, populated with all details, timeline, actions, and compliance checklist.
+    - A new log entry is appended to a centralized Google Sheet (including all key fields and links to the Doc).
+
+4. **Notifications**
+    - Email (Mailjet or Gmail fallback) is sent to all stakeholders, with a summary and direct links.
+    - Slack notification is posted (with severity color and all report links), using rich formatting for context and urgency.
+    - (Optionally) Additional triggers (Google Chronicle, EDR, or firewall via API) can be called for automatic response or enrichment.
+
+5. **Informational Only?**
+    - If an event is *not* actionable (no IOC match, MFA present, no sensitive access), it is still logged and documented for future audit, but notification makes clear that no action is required.
 
 ---
 
 ## Architecture
 
-See [Architecture.md](Architecture.md) for a diagram and system explanation.
+See [Architecture.md](Architecture.md) for diagrams and an in-depth explanation.
 
----
+**Core automation workflow:**
 
-## Code Structure
+```mermaid
+graph TD
+  Intake[Incident Intake: Webhook/cURL/Manual] --> Normalize[Parse & Normalize Data]
+  Normalize --> IOCCheck[IOC IP Check]
+  IOCCheck -->|IOC Match| Actionable[Actionable Incident Flow]
+  IOCCheck -->|No IOC| Escalation[Escalation Logic]
+  Escalation -->|Escalate| Actionable
+  Escalation -->|No Escalation| Informational[Log as Informational Only]
+  Actionable --> Docs[Generate Google Doc Report]
+  Actionable --> Email[Send Email Notification]
+  Actionable --> Slack[Send Slack Notification]
+  Actionable --> Sheet[Log to Google Sheet]
+  Actionable -->|optional| Chronicle[Trigger Chronicle/EDR]
+  Informational --> Docs
+  Informational --> Sheet
+  Informational --> Email
+  Informational --> Slack
+Function Reference
+Key Functions
+doPost(e): Webhook entrypoint – receives incident as JSON, normalizes, triggers the full flow.
 
-See [Code Structure.md](Code%20Structure.md) for a description of every file and its purpose.
+main(): Manual trigger/test – processes a mock incident for testing and initial setup.
 
----
+updateIocIpList(): IOC blocklist updater – downloads and stores latest FireHOL blocklist to script properties.
 
-## Configuration
+isIocIp(ip): Checks if an IP is in the current IOC blocklist.
 
-See [Configuration.md](Configuration.md) for how to set up API keys, edit the configuration object, and connect Google Docs/Sheets/Mailjet/Slack.
+processIncident(incident): Core engine – decides if incident is actionable, then runs reporting, notifications, and logging.
 
----
+createIncidentReport(incident): Makes a new Google Doc from the template, replacing all placeholders.
 
-## Installation and Usage
+insertSummaryToDoc(docId, summary, incident): Writes executive summary, timeline, and all details to the Doc.
 
-Step-by-step installation, deployment, and usage instructions are in [Installation and Usage.md](Installation%20and%20Usage.md).
+sendIncidentNotification(incident, docId, summary, isActionable): Sends styled email (Mailjet/Gmail).
 
----
+sendSlackNotification(incident, docId, isActionable): Sends formatted Slack alert.
 
-## Sample Google Docs Template
+logIncidentToSheet(incident, docId): Appends the incident to the Google Sheet.
 
-A recommended structure for your incident report template is provided in [Sample Google Docs Template (Recommended Structure).md](Sample%20Google%20Docs%20Template%20(Recommended%20Structure).md).
+kickoffChronicle(incident): (Optional) Triggers a Chronicle/EDR/API playbook for deeper investigation.
 
----
+logActivity(msg, level): Centralized logging for troubleshooting and audit.
 
-## Mock Incident JSON Example
+Configuration
+All configuration (Doc/Sheet IDs, email addresses, Slack webhook, etc.) is in a single CONFIG object at the top of the main script file.
 
-Use [mock_incident-json.MD](mock_incident-json.MD) for example incident data and for testing your webhooks or cURL scripts.
+See Configuration.md for:
 
----
+How to obtain Google Doc/Sheet IDs
 
-## Improvements and Ideas
+How to share resources with the Apps Script project
 
-Planned features, known issues, and suggestions can be found in [improvements.md](improvements.md).
+Setting up Mailjet (API keys) or Slack (webhook)
 
----
+Enabling/disabling Chronicle or other integrations
 
-## License
+Installation & Usage
+Step-by-step install, deploy, and usage guide is provided in Installation and Usage.md.
 
-See [License.md](License.md).
+In brief:
 
----
+Copy the Apps Script project into your Google Workspace.
 
-## Credits
+Update CONFIG with your own template, sheet, Slack, and emails.
 
-See [Credits.md](Credits.md).
+Authorize (run main() in editor to prompt permissions).
 
----
+Deploy as Web App (set access as "Anyone" for initial testing).
 
-**Main Script:**  
-All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.gs).
+Test via main() or cURL/webhook – see Mock Incident JSON Example.
 
----
+Monitor logs and outputs (Google Sheet, Docs, Slack, email).
 
-**Tip:**  
-Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
+Templates & Examples
+Sample Google Docs Template (Recommended Structure)
 
-# SOAR Incident Response Automation
+Mock Incident JSON Example
 
-Automated incident response and documentation for Google Workspace environments using Google Apps Script, Docs, Sheets, Mailjet, and Slack.
+Extending & Integrating
+Supports easy integration with EDR, SIEM, firewalls, or any system capable of sending HTTP POSTs.
 
-<div align="center">
-<img src="https://img.shields.io/badge/Automation-Google%20Apps%20Script-blue" alt="Google Apps Script"/>
-<img src="https://img.shields.io/badge/Email-Mailjet-green" alt="Mailjet"/>
-<img src="https://img.shields.io/badge/Chat-Slack-%234A154B" alt="Slack"/>
-</div>
+To add more notification channels, see sendIncidentNotification and sendSlackNotification.
 
----
+Add logic to processIncident for new escalation rules, enrichment, or auto-remediation.
 
-## Table of Contents
+Use the provided logging functions to maintain a full audit trail.
 
-- [Description](#description)
-- [Incident Intake and Kickoff Logic](#incident-intake-and-kickoff-logic)
-- [Architecture Diagram](#architecture-diagram)
-- [Code Structure](#code-structure)
-- [Configuration](#configuration)
-- [Installation and Usage](#installation-and-usage)
-- [Sample Google Docs Template](#sample-google-docs-template)
-- [Mock Incident JSON Example](#mock-incident-json-example)
-- [Improvements and Ideas](#improvements-and-ideas)
-- [License](#license)
-- [Credits](#credits)
-- [Chronicle/EDR/Firewall Integration](#chronicleedrfirewall-integration)
+See Improvements.md for roadmap and ideas.
 
----
+Improvements & Roadmap
+Additional SIEM/EDR enrichment (reverse DNS, geo-IP, user context)
 
-## Description
+Slack interactive actions (acknowledge/close incident)
 
-**SOAR Incident Response Automation** orchestrates and automates security incident response in Google Workspace environments. It automates incident intake, reporting, notifications, and centralized logging via Google Apps Script, Google Docs, Google Sheets, Mailjet, and Slack.
+Automated PDF report export
 
-### Key features
+DLP/data access playbook templates
 
-- **Flexible intake:** Webhook/HTTP POST (SIEM), cURL (simulation), or manual trigger.
-- **Automatic documentation:** Generates incident reports in Google Docs (using a customizable template).
-- **Automated notifications:** Notifies stakeholders via Mailjet (email) and Slack (chat), with direct report/log links and severity color-coding.
-- **Centralized logging:** All incidents are logged in a Google Sheet.
-- **Chronicle/EDR/firewall integration:** Supports automatic response kickoff via Google Chronicle rules, any EDR, or firewall alerts.
-- **Covers both IOC and non-IOC events:** Handles known bad indicators and any suspicious patterns matched by detection rules.
-- **Easily extensible:** Configuration and code are modular for custom logic and integration.
+More robust error handling and monitoring
 
----
+Contributions welcome! See improvements.md.
 
-## Incident Intake and Kickoff Logic
+License & Credits
+License.md
 
-This automation accepts incident alerts from any system capable of sending HTTP requests, and applies the following decision logic:
+Credits.md
 
-1. **Incident Intake**
-    - Receives incident via webhook, cURL, or manual entry.
-    - Extracts all relevant attributes (e.g., source IP, username, alert source, severity).
+Get Started:
+Start with the Configuration and Installation and Usage guides.
+Test with mock incident JSON to verify your deployment.
 
-2. **IOC (Indicator of Compromise) Check**
-    - **If the incident IP is in the IOC list:**
-        - The system treats this as an actionable incident.
-        - Response playbook is triggered.
-        - Full workflow: Documentation, notifications, logging.
-    - **If the IP is NOT in the IOC list:**
-        - The system checks if the incident matches escalation rules (such as:
-            - Suspicious logins (unusual location),
-            - Privileged user actions,
-            - Sensitive resource access,
-            - Any Chronicle, EDR, or firewall rule hit).
-        - **If escalation rule is matched:**
-            - The incident response is automatically triggered:
-                - Generates Google Doc report
-                - Sends notifications
-                - Logs incident
-        - **If NOT matched:**
-            - Logs incident for future triage as informational (no immediate action).
-
-3. **Notifications & Documentation**
-    - Every actionable incident generates:
-        - A Google Doc report from template
-        - Slack and Mailjet notifications, with report links and severity color
-        - Logging in Google Sheet (including non-actionable events for auditability)
-
----
+Core Logic:
+All main logic lives in Soar Incident Responses.gs.
 
 ## Architecture Diagram
 
