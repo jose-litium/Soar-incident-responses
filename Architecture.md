@@ -76,9 +76,6 @@ v | | Notify |
 | & Slack) | +-----------+
 +---------------+
 
-yaml
-Copiar
-Editar
 
 ---
 
