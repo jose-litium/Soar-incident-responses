@@ -102,37 +102,103 @@ All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.
 **Tip:**  
 Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
 
-```mermaid 
+# SOAR Incident Response Automation
+
+Automated incident response and documentation for Google Workspace environments using Google Apps Script, Docs, Sheets, Mailjet, and Slack.
+
+<div align="center">
+<img src="https://img.shields.io/badge/Automation-Google%20Apps%20Script-blue" alt="Google Apps Script"/>
+<img src="https://img.shields.io/badge/Email-Mailjet-green" alt="Mailjet"/>
+<img src="https://img.shields.io/badge/Chat-Slack-%234A154B" alt="Slack"/>
+</div>
+
+---
+
+## Table of Contents
+
+- [Description](#description)
+- [Incident Intake and Kickoff Logic](#incident-intake-and-kickoff-logic)
+- [Architecture Diagram](#architecture-diagram)
+- [Code Structure](#code-structure)
+- [Configuration](#configuration)
+- [Installation and Usage](#installation-and-usage)
+- [Sample Google Docs Template](#sample-google-docs-template)
+- [Mock Incident JSON Example](#mock-incident-json-example)
+- [Improvements and Ideas](#improvements-and-ideas)
+- [License](#license)
+- [Credits](#credits)
+- [Chronicle/EDR/Firewall Integration](#chronicleedrfirewall-integration)
+
+---
+
+## Description
+
+**SOAR Incident Response Automation** orchestrates and automates security incident response in Google Workspace environments. It automates incident intake, reporting, notifications, and centralized logging via Google Apps Script, Google Docs, Google Sheets, Mailjet, and Slack.
+
+### Key features
+
+- **Flexible intake:** Webhook/HTTP POST (SIEM), cURL (simulation), or manual trigger.
+- **Automatic documentation:** Generates incident reports in Google Docs (using a customizable template).
+- **Automated notifications:** Notifies stakeholders via Mailjet (email) and Slack (chat), with direct report/log links and severity color-coding.
+- **Centralized logging:** All incidents are logged in a Google Sheet.
+- **Chronicle/EDR/firewall integration:** Supports automatic response kickoff via Google Chronicle rules, any EDR, or firewall alerts.
+- **Covers both IOC and non-IOC events:** Handles known bad indicators and any suspicious patterns matched by detection rules.
+- **Easily extensible:** Configuration and code are modular for custom logic and integration.
+
+---
+
+## Incident Intake and Kickoff Logic
+
+This automation accepts incident alerts from any system capable of sending HTTP requests, and applies the following decision logic:
+
+1. **Incident Intake**
+    - Receives incident via webhook, cURL, or manual entry.
+    - Extracts all relevant attributes (e.g., source IP, username, alert source, severity).
+
+2. **IOC (Indicator of Compromise) Check**
+    - **If the incident IP is in the IOC list:**
+        - The system treats this as an actionable incident.
+        - Response playbook is triggered.
+        - Full workflow: Documentation, notifications, logging.
+    - **If the IP is NOT in the IOC list:**
+        - The system checks if the incident matches escalation rules (such as:
+            - Suspicious logins (unusual location),
+            - Privileged user actions,
+            - Sensitive resource access,
+            - Any Chronicle, EDR, or firewall rule hit).
+        - **If escalation rule is matched:**
+            - The incident response is automatically triggered:
+                - Generates Google Doc report
+                - Sends notifications
+                - Logs incident
+        - **If NOT matched:**
+            - Logs incident for future triage as informational (no immediate action).
+
+3. **Notifications & Documentation**
+    - Every actionable incident generates:
+        - A Google Doc report from template
+        - Slack and Mailjet notifications, with report links and severity color
+        - Logging in Google Sheet (including non-actionable events for auditability)
+
+---
+
+## Architecture Diagram
+
+Below is a unified flowchart showing all logic paths:
+
+```mermaid
 flowchart TD
     Start([Incident Intake<br/>(Webhook / cURL / Manual)])
-    Start --> CheckIOC{Is IP in IOC List?}
+    Start --> Parse[Extract Incident Attributes]
+    Parse --> CheckIOC{Is IP in IOC List?}
 
-    %% IOC in list
-    CheckIOC -- "Yes" --> IOC_MFA{Was MFA used?}
-    IOC_MFA -- "No" --> Actionable1[Actionable Incident<br/>(IOC, no MFA)]
-    IOC_MFA -- "Yes" --> Actionable2[Actionable Incident<br/>(IOC, MFA used)]
+    CheckIOC -- "Yes" --> Actionable[Actionable Incident<br/>(IOC matched)]
+    Actionable --> CreateDoc[Generate Google Doc Report]
+    CreateDoc --> Notify[Notify via Mailjet & Slack]
+    Notify --> Log[Log to Google Sheet]
 
-    %% IOC not in list
-    CheckIOC -- "No" --> NonIOC_MFA{Was MFA used?}
-    NonIOC_MFA -- "No" --> Actionable3[Actionable Incident<br/>(No IOC, no MFA)]
-    NonIOC_MFA -- "Yes" --> InfoOnly[Informational Event<br/>(No IOC, MFA used)]
-
-    %% Actionable path
-    Actionable1 & Actionable2 & Actionable3 --> GenDocA[Generate Google Doc Report]
-    GenDocA --> EmailSlackA[Send Email & Slack<br/>(Severity color/status Open)]
-    EmailSlackA --> LogOpen[Log in Google Sheet<br/>(Status: Open)]
-    LogOpen --> EndA([End])
-
-    %% Informational path
-    InfoOnly --> GenDocI[Generate Google Doc Report]
-    GenDocI --> EmailSlackI[Send Email & Slack<br/>(Informational banner, Status: Closed)]
-    EmailSlackI --> LogClosed[Log in Google Sheet<br/>(Status: Closed)]
-    LogClosed --> EndI([End])
-
-    %% Styling
-    classDef info fill:#eef6fa,stroke:#68a0c5,stroke-width:2px;
-    class InfoOnly,EmailSlackI,LogClosed info
-    classDef action fill:#f3f8ea,stroke:#92c47a,stroke-width:2px;
-    class Actionable1,Actionable2,Actionable3,EmailSlackA,LogOpen action
-    classDef doc fill:#fff,stroke:#aaa,stroke-dasharray: 3 3;
-    class GenDocA,GenDocI doc
+    CheckIOC -- "No" --> CheckRule{Escalation Rule<br/>(Chronicle / EDR / Firewall)?}
+    CheckRule -- "Yes" --> Kickoff[Auto-Kickoff Incident Response]
+    Kickoff --> CreateDoc
+    CheckRule -- "No" --> NonActionable[Log as Informational / Triage]
+    NonActionable --> Log
