@@ -7,5 +7,4 @@
 | 2024-05-16 | Slack Improvements                  | Color-coded, with direct Doc links and “Closed” state for info-only events                  |
 | 2024-05-16 | Google Sheets Log                   | All events (including info-only) are logged, with Doc URL                                   |
 | 2024-05-16 | Chronicle API Kickoff (Disabled)    | Optional API call to Chronicle for actionable incidents (default: disabled)                 |
-| 2024-05-16 | Full English Documentation          | All code sections are now commented in clear English                                        |
 | 2024-05-16 | IOC Feed Updater                    | Automated IOC (malicious IP) fetch from FireHOL                                             |
