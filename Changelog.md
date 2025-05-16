@@ -1,10 +1,10 @@
-| Date       | Feature / Improvement                | Details                                                                                     |
-|------------|-------------------------------------|---------------------------------------------------------------------------------------------|
-| 2024-05-16 | IOC CIDR Support                    | IP matching now works with FireHOL CIDR ranges (not just single IPs)                        |
-| 2024-05-16 | Actionable vs Informational Logic   | Only escalates if IOC match or no MFA; else, status is “Closed” and notification is muted   |
-| 2024-05-16 | Contextual Notifications            | Emails/Slack alerts display banners and severity only if actionable; “Closed” for info only |
-| 2024-05-16 | Links-Only Email                    | No attachments; always includes Google Doc and Sheet links                                  |
-| 2024-05-16 | Slack Improvements                  | Color-coded, with direct Doc links and “Closed” state for info-only events                  |
-| 2024-05-16 | Google Sheets Log                   | All events (including info-only) are logged, with Doc URL                                   |
-| 2024-05-16 | Chronicle API Kickoff (Disabled)    | Optional API call to Chronicle for actionable incidents (default: disabled)                 |
-| 2024-05-16 | IOC Feed Updater                    | Automated IOC (malicious IP) fetch from FireHOL                                             |
+| Date       | Feature / Improvement            | Description                                                                                 |
+|------------|----------------------------------|---------------------------------------------------------------------------------------------|
+| 2024-05-16 | Full CIDR IOC Support            | IP matching supports entire FireHOL CIDR ranges, not just individual addresses.              |
+| 2024-05-16 | Actionable/Escalation Logic      | Incidents are escalated only for IOC matches or if MFA was not used; others are informational and auto-closed. |
+| 2024-05-16 | Contextual Notifications         | Email/Slack alerts show severity and banners only for actionable incidents; info-only events are marked "Closed". |
+| 2024-05-16 | Link-First Email Alerts          | No attachments; every email includes direct Google Doc and Sheet links for instant review.   |
+| 2024-05-16 | Enhanced Slack Alerts            | Color-coded Slack messages with Doc links; info-only incidents are clearly marked as "Closed". |
+| 2024-05-16 | Comprehensive Logging            | All incidents (including informational) are logged in Google Sheets, with direct Doc URLs.   |
+| 2024-05-16 | Chronicle API Integration (Opt.) | Optional: Auto-kickoff of Chronicle investigation for actionable incidents (default: off).   |
+| 2024-05-16 | Automated IOC Feed Update        | Automatically fetches and updates IOC (malicious IP) lists from FireHOL for current threat data. |
