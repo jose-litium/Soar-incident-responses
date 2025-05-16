@@ -188,16 +188,16 @@ Below is a unified flowchart showing all logic paths:
 
 ```mermaid
 flowchart TD
-    Start([Incident Intake<br/>(Webhook / cURL / Manual)])
+    Start([Incident Intake (Webhook / cURL / Manual)])
     Start --> Parse[Extract Incident Attributes]
     Parse --> CheckIOC{Is IP in IOC List?}
 
-    CheckIOC -- "Yes" --> Actionable[Actionable Incident<br/>(IOC matched)]
+    CheckIOC -- "Yes" --> Actionable[Actionable Incident (IOC matched)]
     Actionable --> CreateDoc[Generate Google Doc Report]
     CreateDoc --> Notify[Notify via Mailjet & Slack]
     Notify --> Log[Log to Google Sheet]
 
-    CheckIOC -- "No" --> CheckRule{Escalation Rule<br/>(Chronicle / EDR / Firewall)?}
+    CheckIOC -- "No" --> CheckRule{Escalation Rule (Chronicle / EDR / Firewall)?}
     CheckRule -- "Yes" --> Kickoff[Auto-Kickoff Incident Response]
     Kickoff --> CreateDoc
     CheckRule -- "No" --> NonActionable[Log as Informational / Triage]
