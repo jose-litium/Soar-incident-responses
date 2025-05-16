@@ -2,27 +2,26 @@
 
 ```text
 ├── Architecture.md
-│   └── High-level system diagram and data-flow explanation
+│   └── Overview of system components and process flow (with diagram & ASCII flow).
 ├── CHRONICLE_INTEGRATION.md
-│   └── Example integration with Chronicle SIEM (webhook/cURL)
+│   └── Example: How to enable and use Chronicle SIEM integration.
 ├── Code Structure.md
-│   └── This file: overview of every top-level file and its purpose
+│   └── This file. Brief summary of every project file and its purpose.
 ├── Configuration.md
-│   └── How to configure template IDs, API keys, email & Slack settings
+│   └── All configuration variables (IDs, API keys, notification settings, sharing).
 ├── Credits.md
-│   └── Acknowledgements and contributor credits
+│   └── Acknowledgments, contributors, and third-party tools.
 ├── Installation and Usage.md
-│   └── Step-by-step deployment and usage guide
+│   └── Step-by-step deployment, permissions, and usage instructions.
 ├── License.md
-│   └── MIT license text
+│   └── MIT license.
 ├── README.md
-│   └── Project overview, key features, and table of contents
+│   └── Project overview, features, architecture summary, and quick start.
 ├── Sample Google Docs Template (Recommended Structure).md
-│   └── Markdown preview of the incident-report template with merge tags
+│   └── Example: Incident report template structure, merge tags, and formatting tips.
 ├── Soar Incident Responses.gs
-│   └── Main Google Apps Script: incident intake, report generation, notifications, logging
+│   └── Main Google Apps Script: handles incident intake, IOC check, report/doc generation, notifications, and logging.
 ├── improvements.md
-│   └── Road-map and backlog of suggested enhancements
-└── mock_incident-json.MD
-    └── Sample JSON payload for manual testing of the `doPost` webhook
-
+│   └── Ideas, roadmap, and suggestions for future enhancements.
+└── mock_incident-json.md
+    └── Example JSON payloads for manual/webhook testing and development.
