@@ -187,18 +187,20 @@ This automation accepts incident alerts from any system capable of sending HTTP 
 Below is a unified flowchart showing all logic paths:
 
 ```mermaid
+
+
 flowchart TD
-    Start([Incident Intake (Webhook / cURL / Manual)])
+    Start([Incident Intake: Webhook, cURL, Manual])
     Start --> Parse[Extract Incident Attributes]
     Parse --> CheckIOC{Is IP in IOC List?}
 
-    CheckIOC -- "Yes" --> Actionable[Actionable Incident (IOC matched)]
+    CheckIOC -- Yes --> Actionable[Actionable Incident: IOC Matched]
     Actionable --> CreateDoc[Generate Google Doc Report]
-    CreateDoc --> Notify[Notify via Mailjet & Slack]
+    CreateDoc --> Notify[Notify via Mailjet and Slack]
     Notify --> Log[Log to Google Sheet]
 
-    CheckIOC -- "No" --> CheckRule{Escalation Rule (Chronicle / EDR / Firewall)?}
-    CheckRule -- "Yes" --> Kickoff[Auto-Kickoff Incident Response]
+    CheckIOC -- No --> CheckRule{Escalation Rule: Chronicle, EDR, Firewall}
+    CheckRule -- Yes --> Kickoff[Auto-Kickoff Incident Response]
     Kickoff --> CreateDoc
-    CheckRule -- "No" --> NonActionable[Log as Informational / Triage]
+    CheckRule -- No --> NonActionable[Log as Informational or Triage]
     NonActionable --> Log
