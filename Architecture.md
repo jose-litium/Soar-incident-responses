@@ -42,3 +42,77 @@ The SOAR Incident Response Automation is designed to orchestrate and document th
 
 Below is an ASCII-style flow diagram representing the automation logic:
 
++----------------------+
+| Incident Intake | <-- (Webhook, cURL, or manual)
++----------+-----------+
+|
+v
++----------------------+
+| Normalize & Parse |
++----------+-----------+
+|
+v
++-------------------------------+
+| IOC IP Check (blocklist) |
++-----+-------------------+-----+
+| |
+[Match] [No Match]
+| |
+v v
++-----------+ +----------------------+
+|Actionable | | Escalation Rule Check|
++-----+-----+ +-----+----------------+
+| |
+v v
++----------------+ [Match] [No Match]
+| Generate Report|----+ +------------+
+| (Google Docs) | | |Informational|
++-------+--------+ v | Only: |
+| +-----------------+ | Log & |
+v | | Notify |
++---------------+ +----------+| +-------------+
+| Notify by | | Log in |
+| Email (Mailjet| | Sheet |
+| & Slack) | +-----------+
++---------------+
+
+yaml
+Copiar
+Editar
+
+---
+
+## Component Overview
+
+- **Google Apps Script:** Orchestrates the automation, integrates all services, and provides endpoints.
+- **Google Docs:** Templates and stores detailed incident reports.
+- **Google Sheets:** Central log/audit trail of all incidents.
+- **Mailjet (or Gmail):** Sends email notifications to all stakeholders.
+- **Slack:** Posts formatted messages/alerts in real time, with report links and severity color-coding.
+- **(Optional) Chronicle/EDR API:** For auto-response or deeper investigation triggers.
+
+---
+
+## Extending the Architecture
+
+- Add new escalation rules in the `processIncident` function or its helpers.
+- Integrate with additional notification channels (Teams, SMS, ticketing) by extending notification functions.
+- Enrich incident context (geo-IP, user info, device, etc.) before documentation and notification.
+- Schedule regular updates of the IOC/blocklist with a timed Apps Script trigger.
+- Use Apps Script triggers to automate health checks, IOC updates, or regular reporting.
+
+---
+
+## Diagram Legend
+
+- **Actionable:** Triggers report creation, notifications, and full logging.
+- **Informational Only:** Logged for traceability but requires no immediate action.
+- **All incidents** are auditable, with documentation and log retention by design.
+
+---
+
+For further technical details, see the main script or each helper module’s documentation.
+Tip:
+You can put a PNG or mermaid version as an additional section later, but this ASCII will always render in Markdown, PDFs, code viewers, and documentation generators.
+
+Let me know if you want a Spanish version, or want this extended for compliance mapping or cloud security reviews!
