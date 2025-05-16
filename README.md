@@ -103,43 +103,36 @@ All core logic is in [`Soar Incident Responses.gs`](Soar%20Incident%20Responses.
 Start by reading the [Configuration](Configuration.md) and [Installation and Usage](Installation%20and%20Usage.md) guides, then review the Docs Template and mock JSON files to quickly set up and test your automation.
 
 ---
-
 flowchart TD
-    A[Incident Intake (Webhook/cURL/Manual)] --> B{Is IP in IOC list?}
-    B -- Yes --> C{Was MFA used?}
-    B -- No --> D{Was MFA used?}
+    Start([Incident Intake<br/>(Webhook / cURL / Manual)])
+    Start --> CheckIOC{Is IP in IOC List?}
+    
+    %% IOC in list
+    CheckIOC -- "Yes" --> IOC_MFA{Was MFA used?}
+    IOC_MFA -- "No" --> Actionable1[Actionable Incident<br/>(IOC, no MFA)]
+    IOC_MFA -- "Yes" --> Actionable2[Actionable Incident<br/>(IOC, MFA used)]
+    
+    %% IOC not in list
+    CheckIOC -- "No" --> NonIOC_MFA{Was MFA used?}
+    NonIOC_MFA -- "No" --> Actionable3[Actionable Incident<br/>(No IOC, no MFA)]
+    NonIOC_MFA -- "Yes" --> InfoOnly[Informational Event<br/>(No IOC, MFA used)]
 
-    %% --- IOC Branch ---
-    C -- No --> E[Actionable Incident]
-    C -- Yes --> F[Actionable Incident]
-    E --> G[Generate Doc Report]
-    E --> H[Send Email/Slack (Severity: Open)]
-    E --> I[Log as Open]
-    F --> G
-    F --> H
-    F --> I
-    %% --- Non-IOC Branch ---
-    D -- No --> J[Actionable Incident]
-    D -- Yes --> K[Informational Only]
-    J --> G
-    J --> H
-    J --> I
-    K --> L[Generate Doc Report]
-    K --> M[Send Email/Slack (Banner: Informational, Status: Closed)]
-    K --> N[Log as Closed]
+    %% Actionable path
+    Actionable1 & Actionable2 & Actionable3 --> GenDocA[Generate Google Doc Report]
+    GenDocA --> EmailSlackA[Send Email & Slack<br/>(Severity color/status Open)]
+    EmailSlackA --> LogOpen[Log in Google Sheet<br/>(Status: Open)]
+    LogOpen --> EndA([End])
 
-    %% Merge points for documentation
-    G --> O[Google Doc Link]
-    I --> O
-    L --> O
-    N --> O
-    H --> O
-    M --> O
+    %% Informational path
+    InfoOnly --> GenDocI[Generate Google Doc Report]
+    GenDocI --> EmailSlackI[Send Email & Slack<br/>(Informational banner, Status: Closed)]
+    EmailSlackI --> LogClosed[Log in Google Sheet<br/>(Status: Closed)]
+    LogClosed --> EndI([End])
 
-    style K fill:#fafbfc,stroke:#777,stroke-width:1.5px
-    style M fill:#f1f2f6,stroke:#888,stroke-dasharray: 5 5
-    style N fill:#f1f2f6,stroke:#888,stroke-dasharray: 5 5
-
-    %% Labels
-    classDef info fill:#f1f2f6,stroke:#888;
-    class K,M,N info
+    %% Styling
+    classDef info fill:#eef6fa,stroke:#68a0c5,stroke-width:2px;
+    class InfoOnly,EmailSlackI,LogClosed info
+    classDef action fill:#f3f8ea,stroke:#92c47a,stroke-width:2px;
+    class Actionable1,Actionable2,Actionable3,EmailSlackA,LogOpen action
+    classDef doc fill:#fff,stroke:#aaa,stroke-dasharray: 3 3;
+    class GenDocA,GenDocI doc
