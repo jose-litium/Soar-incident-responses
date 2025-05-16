@@ -86,23 +86,6 @@ Below is a simplified flowchart showing the automation logic (works in Mermaid-e
 
 > **Note:** If this diagram does not render, view it on a [Mermaid live editor](https://mermaid-js.github.io/mermaid-live-editor/) or see the exported PNG in the repository.
 
-```mermaid
-flowchart TD
-    Intake([Incident Intake: Webhook, cURL, Manual])
-    Intake --> Normalize[Extract Incident Attributes]
-    Normalize --> IOCCheck{Is IP in IOC List?}
-
-    IOCCheck -- Yes --> Actionable[Actionable Incident: IOC Matched]
-    Actionable --> CreateDoc[Generate Google Doc Report]
-    CreateDoc --> Notify[Notify via Mailjet and Slack]
-    Notify --> Log[Log to Google Sheet]
-
-    IOCCheck -- No --> EscalateCheck{Escalation Rule? (Chronicle/EDR/Firewall)}
-    EscalateCheck -- Yes --> Kickoff[Kickoff Automated Response]
-    Kickoff --> CreateDoc
-    EscalateCheck -- No --> Informational[Log as Informational Only]
-    Informational --> Log
-
 
 ```mermaid
 
