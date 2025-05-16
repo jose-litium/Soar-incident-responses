@@ -78,130 +78,31 @@ Ideal for SOC teams, IT admins, and GCP-native organizations seeking fast, audit
     - If an event is *not* actionable (no IOC match, MFA present, no sensitive access), it is still logged and documented for future audit, but notification makes clear that no action is required.
 
 ---
-
 ## Architecture
 
-See [Architecture.md](Architecture.md) for diagrams and an in-depth explanation.
+See [Architecture.md](Architecture.md) for full diagrams and an in-depth explanation.
 
-**Core automation workflow:**
+Below is a simplified flowchart showing the automation logic (works in Mermaid-enabled markdown viewers):
+
+> **Note:** If this diagram does not render, view it on a [Mermaid live editor](https://mermaid-js.github.io/mermaid-live-editor/) or see the exported PNG in the repository.
 
 ```mermaid
-graph TD
-  Intake[Incident Intake: Webhook/cURL/Manual] --> Normalize[Parse & Normalize Data]
-  Normalize --> IOCCheck[IOC IP Check]
-  IOCCheck -->|IOC Match| Actionable[Actionable Incident Flow]
-  IOCCheck -->|No IOC| Escalation[Escalation Logic]
-  Escalation -->|Escalate| Actionable
-  Escalation -->|No Escalation| Informational[Log as Informational Only]
-  Actionable --> Docs[Generate Google Doc Report]
-  Actionable --> Email[Send Email Notification]
-  Actionable --> Slack[Send Slack Notification]
-  Actionable --> Sheet[Log to Google Sheet]
-  Actionable -->|optional| Chronicle[Trigger Chronicle/EDR]
-  Informational --> Docs
-  Informational --> Sheet
-  Informational --> Email
-  Informational --> Slack
-Function Reference
-Key Functions
-doPost(e): Webhook entrypoint – receives incident as JSON, normalizes, triggers the full flow.
+flowchart TD
+    Intake([Incident Intake: Webhook, cURL, Manual])
+    Intake --> Normalize[Extract Incident Attributes]
+    Normalize --> IOCCheck{Is IP in IOC List?}
 
-main(): Manual trigger/test – processes a mock incident for testing and initial setup.
+    IOCCheck -- Yes --> Actionable[Actionable Incident: IOC Matched]
+    Actionable --> CreateDoc[Generate Google Doc Report]
+    CreateDoc --> Notify[Notify via Mailjet and Slack]
+    Notify --> Log[Log to Google Sheet]
 
-updateIocIpList(): IOC blocklist updater – downloads and stores latest FireHOL blocklist to script properties.
+    IOCCheck -- No --> EscalateCheck{Escalation Rule? (Chronicle/EDR/Firewall)}
+    EscalateCheck -- Yes --> Kickoff[Kickoff Automated Response]
+    Kickoff --> CreateDoc
+    EscalateCheck -- No --> Informational[Log as Informational Only]
+    Informational --> Log
 
-isIocIp(ip): Checks if an IP is in the current IOC blocklist.
-
-processIncident(incident): Core engine – decides if incident is actionable, then runs reporting, notifications, and logging.
-
-createIncidentReport(incident): Makes a new Google Doc from the template, replacing all placeholders.
-
-insertSummaryToDoc(docId, summary, incident): Writes executive summary, timeline, and all details to the Doc.
-
-sendIncidentNotification(incident, docId, summary, isActionable): Sends styled email (Mailjet/Gmail).
-
-sendSlackNotification(incident, docId, isActionable): Sends formatted Slack alert.
-
-logIncidentToSheet(incident, docId): Appends the incident to the Google Sheet.
-
-kickoffChronicle(incident): (Optional) Triggers a Chronicle/EDR/API playbook for deeper investigation.
-
-logActivity(msg, level): Centralized logging for troubleshooting and audit.
-
-Configuration
-All configuration (Doc/Sheet IDs, email addresses, Slack webhook, etc.) is in a single CONFIG object at the top of the main script file.
-
-See Configuration.md for:
-
-How to obtain Google Doc/Sheet IDs
-
-How to share resources with the Apps Script project
-
-Setting up Mailjet (API keys) or Slack (webhook)
-
-Enabling/disabling Chronicle or other integrations
-
-Installation & Usage
-Step-by-step install, deploy, and usage guide is provided in Installation and Usage.md.
-
-In brief:
-
-Copy the Apps Script project into your Google Workspace.
-
-Update CONFIG with your own template, sheet, Slack, and emails.
-
-Authorize (run main() in editor to prompt permissions).
-
-Deploy as Web App (set access as "Anyone" for initial testing).
-
-Test via main() or cURL/webhook – see Mock Incident JSON Example.
-
-Monitor logs and outputs (Google Sheet, Docs, Slack, email).
-
-Templates & Examples
-Sample Google Docs Template (Recommended Structure)
-
-Mock Incident JSON Example
-
-Extending & Integrating
-Supports easy integration with EDR, SIEM, firewalls, or any system capable of sending HTTP POSTs.
-
-To add more notification channels, see sendIncidentNotification and sendSlackNotification.
-
-Add logic to processIncident for new escalation rules, enrichment, or auto-remediation.
-
-Use the provided logging functions to maintain a full audit trail.
-
-See Improvements.md for roadmap and ideas.
-
-Improvements & Roadmap
-Additional SIEM/EDR enrichment (reverse DNS, geo-IP, user context)
-
-Slack interactive actions (acknowledge/close incident)
-
-Automated PDF report export
-
-DLP/data access playbook templates
-
-More robust error handling and monitoring
-
-Contributions welcome! See improvements.md.
-
-License & Credits
-License.md
-
-Credits.md
-
-Get Started:
-Start with the Configuration and Installation and Usage guides.
-Test with mock incident JSON to verify your deployment.
-
-Core Logic:
-All main logic lives in Soar Incident Responses.gs.
-
-## Architecture Diagram
-
-Below is a unified flowchart showing all logic paths:
 
 ```mermaid
 
