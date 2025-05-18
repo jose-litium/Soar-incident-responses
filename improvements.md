@@ -1,4 +1,4 @@
-## 🛠 Suggested Improvements
+##  Suggested Improvements
 
 This project serves as a foundational SOAR (Security Orchestration, Automation, and Response) prototype leveraging Google Workspace tools. The following enhancements are proposed, organized by estimated implementation timeline and complexity:
 
