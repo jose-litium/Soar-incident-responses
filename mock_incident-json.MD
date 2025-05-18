@@ -1,4 +1,4 @@
-## 📝 Example Incident JSON
+##  Example Incident JSON
 
 Below is a sample JSON payload representing a security incident. This format is used when interacting with the SOAR webhook (for example, using `curl`, Google Chronicle, or other automated sources):
 
