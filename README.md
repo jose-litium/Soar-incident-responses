@@ -196,19 +196,24 @@ Below is a simplified flowchart showing the automation logic (works in Mermaid-e
 > **Note:** If this diagram does not render, view it on a [Mermaid live editor](https://mermaid-js.github.io/mermaid-live-editor/) or see the exported PNG in the repository.
 
 ```mermaid
+---
+config:
+  layout: dagre
+  theme: neo
+  look: neo
+---
 flowchart TD
-    A([Start]) --> B[doPost / main: Receive Data]
-    B --> C[createIncidentFromData: Normalize Data]
-    C --> D[classifyIncident: Check IOC & MFA]
-    D --> E[processIncident: Decide Actionability]
-    E --> F{Severity?}
-    F -- High/Medium --> G[createIncidentReport: Make Doc]
-    G --> H[insertSummaryToDoc: Fill Doc]
-    H --> I[sendIncidentNotification/sendSlackNotification: Notify Team]
-    I --> J[logIncidentToSheet: Log in Spreadsheet]
-    J --> K{Chronicle Enabled?}
-    K -- Yes --> L[kickoffChronicle: Advanced Analysis]
-    K -- No --> M([End])
-    F -- Low --> N[logIncidentToSheet: Log Event, Mark Closed]
-    N --> M
-    L --> M
+    A(["Start"]) --> B["Receive Incident Data"]
+    B --> C{"Is login IP in IOC list?"}
+    C -- Yes --> D{"Was MFA used?"}
+    D -- No --> E["Severity: High"]
+    D -- Yes --> F["Severity: Medium"]
+    E --> G["Generate Report, Notify, Log, Status: Open"]
+    F --> G
+    C -- No --> H{"Was MFA used?"}
+    H -- No --> I["Severity: Medium"]
+    H -- Yes --> J["Severity: Low"]
+    I --> G
+    J --> K["Log Event, Status: Closed"]
+    K --> L(["End"])
+    G --> L
