@@ -198,7 +198,7 @@ Below is a simplified flowchart showing the automation logic (works in Mermaid-e
 ```mermaid
 ---
 config:
-  layout: dagre
+  layout: elk
   theme: neo
   look: neo
 ---
