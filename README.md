@@ -195,22 +195,20 @@ Below is a simplified flowchart showing the automation logic (works in Mermaid-e
 
 > **Note:** If this diagram does not render, view it on a [Mermaid live editor](https://mermaid-js.github.io/mermaid-live-editor/) or see the exported PNG in the repository.
 
-
 ```mermaid
-
-
 flowchart TD
-    Start([Incident Intake: Webhook, cURL, Manual])
-    Start --> Parse[Extract Incident Attributes]
-    Parse --> CheckIOC{Is IP in IOC List?}
-
-    CheckIOC -- Yes --> Actionable[Actionable Incident: IOC Matched]
-    Actionable --> CreateDoc[Generate Google Doc Report]
-    CreateDoc --> Notify[Notify via Mailjet and Slack]
-    Notify --> Log[Log to Google Sheet]
-
-    CheckIOC -- No --> CheckRule{Escalation Rule: Chronicle, EDR, Firewall}
-    CheckRule -- Yes --> Kickoff[Auto-Kickoff Incident Response]
-    Kickoff --> CreateDoc
-    CheckRule -- No --> NonActionable[Log as Informational or Triage]
-    NonActionable --> Log
+    A([Start]) --> B[doPost / main: Receive Data]
+    B --> C[createIncidentFromData: Normalize Data]
+    C --> D[classifyIncident: Check IOC & MFA]
+    D --> E[processIncident: Decide Actionability]
+    E --> F{Severity?}
+    F -- High/Medium --> G[createIncidentReport: Make Doc]
+    G --> H[insertSummaryToDoc: Fill Doc]
+    H --> I[sendIncidentNotification/sendSlackNotification: Notify Team]
+    I --> J[logIncidentToSheet: Log in Spreadsheet]
+    J --> K{Chronicle Enabled?}
+    K -- Yes --> L[kickoffChronicle: Advanced Analysis]
+    K -- No --> M([End])
+    F -- Low --> N[logIncidentToSheet: Log Event, Mark Closed]
+    N --> M
+    L --> M
