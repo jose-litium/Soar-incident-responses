@@ -25,7 +25,7 @@ This section explains, step by step, how the app processes incidents, which main
 ```mermaid
 flowchart TD
     A([Start]) --> B[doPost / main: Receive Data]
-    B --> C[createIncidentFromData: Normalize Data]
+    B --> C[createIncident: Normalize Data]
     C --> D[classifyIncident: Check IOC & MFA]
     D --> E[processIncident: Decide Actionability]
     E --> F{Severity?}
