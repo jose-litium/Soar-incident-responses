@@ -407,6 +407,84 @@ function logIncidentToSheet(incident, docId) {
   }
 }
 
+function generateEmailHtml(incident, summary, docUrl, logUrl, isActionable) {
+
+
+  const severityStyles = {
+    high: 'background:#f8d7da;color:#721c24;border-left:8px solid #d32f2f;',
+    medium: 'background:#fff3cd;color:#856404;border-left:8px solid #ff9800;',
+    low: 'background:#d1ecf1;color:#0c5460;border-left:8px solid #2196f3;'
+  };
+
+  const secOpsAdvice = {
+    high: `<ul><li>Immediately isolate the account or device.</li><li>Launch full investigation.</li><li>Notify compliance if data was accessed.</li></ul>`,
+    medium: `<ul><li>Review logs and context.</li><li>Determine need for escalation.</li><li>Document findings.</li></ul>`,
+    low: `<ul><li>Validate for false positives.</li><li>Continue monitoring.</li></ul>`
+  };
+
+  const infoBanner = !isActionable
+    ? `<div style="background:linear-gradient(90deg, #dee2e6 0%, #cfd8dc 100%);color:#222;padding:18px 24px;font-size:1.15em;border-left:10px solid #6c757d;margin-bottom:24px;display:flex;align-items:center;">
+        <span style="font-size:1.8em; margin-right:16px;">ℹ️</span>
+        <span>
+          <strong>INFORMATIONAL EVENT ONLY</strong><br>
+          This event was automatically logged for record-keeping.<br>
+          <b>No security action is required. Status: Closed.</b>
+        </span>
+      </div>` : '';
+
+  const severityBox = isActionable ? `
+    <div style="${severityStyles[incident.severity.toLowerCase()]}; padding: 15px; border-radius: 7px; margin-bottom: 20px;">
+      <h3 style="margin-top:0;">Incident ID: ${incident.incident_id}</h3>
+      <p><strong>Severity:</strong> ${incident.severity}</p>
+      <p><strong>Status:</strong> ${incident.status}</p>
+    </div>` : `
+    <div style="background:#f3f3f3;color:#666;border-left:8px solid #aaa;padding:15px; border-radius:7px; margin-bottom:20px;">
+      <h3 style="margin-top:0;">Incident ID: ${incident.incident_id}</h3>
+      <p><strong>Status:</strong> Closed</p>
+    </div>`;
+
+  const secOpsBox = isActionable ? `
+    <h3 style="margin-bottom:7px;">Recommended Actions for SecOps</h3>
+    <div style="background: #f4f6f7; padding: 15px; border-left: 5px solid #999; border-radius: 4px; margin-bottom: 20px;">
+      ${secOpsAdvice[incident.severity.toLowerCase()]}
+    </div>` : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px;">
+      <h2 style="color: #252525; border-bottom: 1.5px solid #eee; padding-bottom:7px;">Security Incident Notification</h2>
+      ${infoBanner}
+      ${severityBox}
+      <h3 style="margin-bottom:7px;">Executive Summary</h3>
+      <p>${summary}</p>
+      <h3>Key Details</h3>
+      <table style="width:100%; border-collapse: collapse; font-size:1em;">
+        <tr style="background:#e0e0e0;"><th style="padding:8px;">Field</th><th style="padding:8px;">Value</th></tr>
+        <tr><td style="padding:8px;">User</td><td style="padding:8px;">${incident.user}</td></tr>
+        <tr><td style="padding:8px;">Login IP</td><td style="padding:8px;">${incident.login_ip}</td></tr>
+        <tr><td style="padding:8px;">Location</td><td style="padding:8px;">${incident.location}</td></tr>
+        <tr><td style="padding:8px;">MFA Used</td><td style="padding:8px;">${incident.mfa_used ? 'Yes' : 'No'}</td></tr>
+      </table>
+      ${secOpsBox}
+      <h3 style="margin-bottom:7px;">Investigate IP Address</h3>
+      <div style="text-align:center; margin: 15px 0;">
+        <a href="https://www.virustotal.com/gui/ip-address/${incident.login_ip}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
+        <a href="https://ipinfo.io/${incident.login_ip}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
+        <a href="https://www.abuseipdb.com/check/${incident.login_ip}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
+      </div>
+      <div style="text-align:center;margin-top:32px;">
+        <a href="${docUrl}" style="display:inline-block;background:#5e35b1;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
+          View Full Incident Report (Google Doc)
+        </a>
+        <a href="${logUrl}" style="display:inline-block;background:#388e3c;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
+          View Incident Log Spreadsheet
+        </a>
+      </div>
+      <p style="margin-top: 36px; text-align: center; font-size: 0.93em; color: #777;">
+        This is an automated alert. Do not reply.
+      </p>
+    </div>`;
+}
+
 /**
  * Email notification: HTML summary, status, links, recommended actions.
  */
@@ -414,81 +492,7 @@ function sendIncidentNotification(incident, docId, summary, isActionable) {
   try {
     const logUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.LOG_SPREADSHEET_ID}/edit`;
     const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
-    const status = isActionable ? incident.status : 'Closed';
-
-    const severityStyles = {
-      high: 'background:#f8d7da;color:#721c24;border-left:8px solid #d32f2f;',
-      medium: 'background:#fff3cd;color:#856404;border-left:8px solid #ff9800;',
-      low: 'background:#d1ecf1;color:#0c5460;border-left:8px solid #2196f3;'
-    };
-
-    const secOpsAdvice = {
-      high: `<ul><li>Immediately isolate the account or device.</li><li>Launch full investigation.</li><li>Notify compliance if data was accessed.</li></ul>`,
-      medium: `<ul><li>Review logs and context.</li><li>Determine need for escalation.</li><li>Document findings.</li></ul>`,
-      low: `<ul><li>Validate for false positives.</li><li>Continue monitoring.</li></ul>`
-    };
-
-    const infoBanner = !isActionable
-      ? `<div style="background:linear-gradient(90deg, #dee2e6 0%, #cfd8dc 100%);color:#222;padding:18px 24px;font-size:1.15em;border-left:10px solid #6c757d;margin-bottom:24px;display:flex;align-items:center;">
-          <span style="font-size:1.8em; margin-right:16px;">ℹ️</span>
-          <span>
-            <strong>INFORMATIONAL EVENT ONLY</strong><br>
-            This event was automatically logged for record-keeping.<br>
-            <b>No security action is required. Status: Closed.</b>
-          </span>
-        </div>` : '';
-
-    const severityBox = isActionable ? `
-      <div style="${severityStyles[incident.severity.toLowerCase()]}; padding: 15px; border-radius: 7px; margin-bottom: 20px;">
-        <h3 style="margin-top:0;">Incident ID: ${incident.incident_id}</h3>
-        <p><strong>Severity:</strong> ${incident.severity}</p>
-        <p><strong>Status:</strong> ${incident.status}</p>
-      </div>` : `
-      <div style="background:#f3f3f3;color:#666;border-left:8px solid #aaa;padding:15px; border-radius:7px; margin-bottom:20px;">
-        <h3 style="margin-top:0;">Incident ID: ${incident.incident_id}</h3>
-        <p><strong>Status:</strong> Closed</p>
-      </div>`;
-
-    const secOpsBox = isActionable ? `
-      <h3 style="margin-bottom:7px;">Recommended Actions for SecOps</h3>
-      <div style="background: #f4f6f7; padding: 15px; border-left: 5px solid #999; border-radius: 4px; margin-bottom: 20px;">
-        ${secOpsAdvice[incident.severity.toLowerCase()]}
-      </div>` : '';
-
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px;">
-        <h2 style="color: #252525; border-bottom: 1.5px solid #eee; padding-bottom:7px;">Security Incident Notification</h2>
-        ${infoBanner}
-        ${severityBox}
-        <h3 style="margin-bottom:7px;">Executive Summary</h3>
-        <p>${summary}</p>
-        <h3>Key Details</h3>
-        <table style="width:100%; border-collapse: collapse; font-size:1em;">
-          <tr style="background:#e0e0e0;"><th style="padding:8px;">Field</th><th style="padding:8px;">Value</th></tr>
-          <tr><td style="padding:8px;">User</td><td style="padding:8px;">${incident.user}</td></tr>
-          <tr><td style="padding:8px;">Login IP</td><td style="padding:8px;">${incident.login_ip}</td></tr>
-          <tr><td style="padding:8px;">Location</td><td style="padding:8px;">${incident.location}</td></tr>
-          <tr><td style="padding:8px;">MFA Used</td><td style="padding:8px;">${incident.mfa_used ? 'Yes' : 'No'}</td></tr>
-        </table>
-        ${secOpsBox}
-        <h3 style="margin-bottom:7px;">Investigate IP Address</h3>
-        <div style="text-align:center; margin: 15px 0;">
-          <a href="https://www.virustotal.com/gui/ip-address/${incident.login_ip}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
-          <a href="https://ipinfo.io/${incident.login_ip}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
-          <a href="https://www.abuseipdb.com/check/${incident.login_ip}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
-        </div>
-        <div style="text-align:center;margin-top:32px;">
-          <a href="${docUrl}" style="display:inline-block;background:#5e35b1;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
-            View Full Incident Report (Google Doc)
-          </a>
-          <a href="${logUrl}" style="display:inline-block;background:#388e3c;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
-            View Incident Log Spreadsheet
-          </a>
-        </div>
-        <p style="margin-top: 36px; text-align: center; font-size: 0.93em; color: #777;">
-          This is an automated alert. Do not reply.
-        </p>
-      </div>`;
+    const htmlBody = generateEmailHtml(incident, summary, docUrl, logUrl, isActionable);
 
     CONFIG.STAKEHOLDER_EMAILS.forEach(email => {
       GmailApp.sendEmail(
