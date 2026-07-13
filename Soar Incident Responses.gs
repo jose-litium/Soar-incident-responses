@@ -116,16 +116,16 @@ function updateIocIpList() {
 function isIocIp(ip) {
   const props = PropertiesService.getScriptProperties();
   const iocCidrs = JSON.parse(props.getProperty('IOC_IP_LIST') || '[]');
+  const ipNum = ipToInt(ip);
   for (let cidr of iocCidrs) {
-    if (cidrContainsIp(cidr, ip)) return true;
+    if (cidrContainsIp(cidr, ipNum)) return true;
   }
   return false;
 }
 
 // Returns true if IP is within CIDR (IPv4 only)
-function cidrContainsIp(cidr, ip) {
+function cidrContainsIp(cidr, ipNum) {
   const [range, bits] = cidr.split('/');
-  const ipNum = ipToInt(ip);
   const rangeNum = ipToInt(range);
   const mask = -1 << (32 - parseInt(bits, 10));
   return (ipNum & mask) === (rangeNum & mask);
