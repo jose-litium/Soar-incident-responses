@@ -54,6 +54,7 @@ Clone this repository, or download the files directly from GitHub.
   - Your validated sender address for Mailjet (`FROM_EMAIL`)
   - Slack webhook URL (`SLACK_WEBHOOK_URL`)
   - Slack group link (`SLACK_GROUP_LINK`)
+  - Your secure webhook token (`WEBHOOK_TOKEN`)
 - See [Configuration.md](Configuration.md) for more details.
 
 ### 7. Deploy as a Web App (Optional)
@@ -73,7 +74,7 @@ Clone this repository, or download the files directly from GitHub.
 
 ### Automated Trigger via Webhook
 
-- Send a POST request to the Apps Script Web App endpoint using the format from [mock_incident-json.MD](mock_incident-json.MD).
+- Send a POST request to the Apps Script Web App endpoint using the format from [mock_incident-json.MD](mock_incident-json.MD). Ensure you append the token via query string.
 - Example using cURL:
   ```sh
-  curl -X POST -H "Content-Type: application/json" -d @mock_incident-json.MD "https://script.google.com/macros/s/your-deployment-id/exec"
+  curl -X POST -H "Content-Type: application/json" -d @mock_incident-json.MD "https://script.google.com/macros/s/your-deployment-id/exec?token=CHANGE_ME_SECURE_TOKEN"

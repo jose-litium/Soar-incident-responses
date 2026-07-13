@@ -10,6 +10,7 @@
    - Add your stakeholder emails (`STAKEHOLDER_EMAILS`)
    - Set your Mailjet-validated sender email (`FROM_EMAIL`)
    - Paste your Slack webhook and group link
+   - Update `WEBHOOK_TOKEN` with a strong, secure secret string
 
 3. **Google Sheets Logging**
    - Create a spreadsheet, copy its ID, and set as `LOG_SPREADSHEET_ID`
