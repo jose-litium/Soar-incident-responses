@@ -162,13 +162,20 @@ function createIncidentFromData(data) {
 }
 
 /**
+ * Determines if an incident is actionable.
+ */
+function isIncidentActionable(incident) {
+  return isIocIp(incident.login_ip) || !incident.mfa_used;
+}
+
+/**
  * Main incident workflow: reporting, notifications, logging, and (optional) Chronicle.
  */
 function processIncident(incident) {
   logActivity(`processIncident() started for ${incident.incident_id}`, 'INFO');
   try {
     // Decide if incident is actionable (triggers full workflow)
-    const isActionable = isIocIp(incident.login_ip) || !incident.mfa_used;
+    const isActionable = isIncidentActionable(incident);
     logActivity(`Incident actionable? ${isActionable}`, 'DEBUG');
 
     // Make sure required fields exist
