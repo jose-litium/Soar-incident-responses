@@ -461,21 +461,21 @@ function sendIncidentNotification(incident, docId, summary, isActionable) {
         ${infoBanner}
         ${severityBox}
         <h3 style="margin-bottom:7px;">Executive Summary</h3>
-        <p>${summary}</p>
+        <p>${escapeHtml(summary)}</p>
         <h3>Key Details</h3>
         <table style="width:100%; border-collapse: collapse; font-size:1em;">
           <tr style="background:#e0e0e0;"><th style="padding:8px;">Field</th><th style="padding:8px;">Value</th></tr>
-          <tr><td style="padding:8px;">User</td><td style="padding:8px;">${incident.user}</td></tr>
-          <tr><td style="padding:8px;">Login IP</td><td style="padding:8px;">${incident.login_ip}</td></tr>
-          <tr><td style="padding:8px;">Location</td><td style="padding:8px;">${incident.location}</td></tr>
+          <tr><td style="padding:8px;">User</td><td style="padding:8px;">${escapeHtml(incident.user)}</td></tr>
+          <tr><td style="padding:8px;">Login IP</td><td style="padding:8px;">${escapeHtml(incident.login_ip)}</td></tr>
+          <tr><td style="padding:8px;">Location</td><td style="padding:8px;">${escapeHtml(incident.location)}</td></tr>
           <tr><td style="padding:8px;">MFA Used</td><td style="padding:8px;">${incident.mfa_used ? 'Yes' : 'No'}</td></tr>
         </table>
         ${secOpsBox}
         <h3 style="margin-bottom:7px;">Investigate IP Address</h3>
         <div style="text-align:center; margin: 15px 0;">
-          <a href="https://www.virustotal.com/gui/ip-address/${incident.login_ip}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
-          <a href="https://ipinfo.io/${incident.login_ip}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
-          <a href="https://www.abuseipdb.com/check/${incident.login_ip}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
+          <a href="https://www.virustotal.com/gui/ip-address/${encodeURIComponent(incident.login_ip)}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
+          <a href="https://ipinfo.io/${encodeURIComponent(incident.login_ip)}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
+          <a href="https://www.abuseipdb.com/check/${encodeURIComponent(incident.login_ip)}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
         </div>
         <div style="text-align:center;margin-top:32px;">
           <a href="${docUrl}" style="display:inline-block;background:#5e35b1;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
@@ -621,6 +621,17 @@ function kickoffChronicle(incident) {
 /* ================================
  * UTILITIES & LOGGING
  * ================================ */
+
+// Escape HTML special characters to prevent HTML injection
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') return unsafe;
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 // ISO datetime to local readable string
 function formatDateTime(iso) {
