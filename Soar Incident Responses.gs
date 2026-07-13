@@ -133,7 +133,11 @@ function cidrContainsIp(cidr, ip) {
 
 // IP to 32-bit int
 function ipToInt(ip) {
-  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+  if (typeof ip !== 'string' || !ip.trim()) return 0;
+  return ip.split('.').reduce((acc, octet) => {
+    const parsed = parseInt(octet, 10);
+    return (acc << 8) + (isNaN(parsed) ? 0 : parsed);
+  }, 0) >>> 0;
 }
 
 /* ================================
