@@ -513,20 +513,19 @@ function sendIncidentNotification(incident, docId, summary, isActionable) {
     const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
     const htmlBody = generateEmailHtml(incident, summary, docUrl, logUrl, isActionable);
 
-    CONFIG.STAKEHOLDER_EMAILS.forEach(email => {
-      GmailApp.sendEmail(
-        email,
-        isActionable
-          ? `Incident Alert: ${incident.incident_id} (${incident.severity})`
-          : `Informational Event Logged: ${incident.incident_id}`,
-        "Please view the incident details in the online report links below.",
-        {
-          htmlBody: htmlBody,
-          name: CONFIG.FROM_NAME,
-          replyTo: CONFIG.REPLY_TO_EMAIL
-        }
-      );
-    });
+    const recipients = CONFIG.STAKEHOLDER_EMAILS.join(',');
+    GmailApp.sendEmail(
+      recipients,
+      isActionable
+        ? `Incident Alert: ${incident.incident_id} (${incident.severity})`
+        : `Informational Event Logged: ${incident.incident_id}`,
+      "Please view the incident details in the online report links below.",
+      {
+        htmlBody: htmlBody,
+        name: CONFIG.FROM_NAME,
+        replyTo: CONFIG.REPLY_TO_EMAIL
+      }
+    );
     logActivity('Incident notification email sent.', 'SUCCESS');
   } catch (e) {
     logActivity('Error sending incident email: ' + e.message, 'ERROR');
