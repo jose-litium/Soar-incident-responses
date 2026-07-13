@@ -64,10 +64,13 @@ function doPost(e) {
 
 /**
  * Manual trigger for testing: runs full incident workflow with sample data.
- * Use this for authorizing permissions and debugging.
+ * Running this function in the Apps Script editor will prompt for all required
+ * Google Workspace permissions. It also includes error handling for debugging.
  */
 function main() {
+  console.log('Manual main() test started. Ensure you have authorized all permissions.');
   logActivity('Manual main() test started.', 'INFO');
+
   const incident = {
     incident_id: generateIncidentId(),
     timestamp: new Date().toISOString(),
@@ -86,7 +89,16 @@ function main() {
       'Account locked'
     ]
   };
-  processIncident(incident);
+
+  try {
+    console.log('Processing test incident data:', JSON.stringify(incident, null, 2));
+    processIncident(incident);
+    console.log(`Successfully processed mock incident: ${incident.incident_id}`);
+    logActivity('Manual main() test completed successfully.', 'INFO');
+  } catch (error) {
+    console.error('Error during execution of main():', error);
+    logActivity(`Debugging error in main(): ${error.stack || error.message}`, 'ERROR');
+  }
 }
 
 /* ================================
