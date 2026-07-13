@@ -179,11 +179,12 @@ function processIncident(incident) {
     const summary = generateExecutiveSummary(incident, isActionable);
 
     // Google Doc report (template copy)
-    const docId = createIncidentReport(incident);
+    const doc = createIncidentReport(incident);
+    const docId = doc.getId();
     logActivity('Google Doc report created: ' + docId, 'SUCCESS');
 
     // Write summary/details into Doc
-    insertSummaryToDoc(docId, summary, incident);
+    insertSummaryToDoc(doc, summary, incident);
     logActivity('Report content written to Doc.', 'SUCCESS');
 
     // Email notification to stakeholders
@@ -249,17 +250,18 @@ function createIncidentReport(incident) {
     '{{STATUS}}': incident.status
   };
   Object.entries(placeholders).forEach(([key, value]) => body.replaceText(key, value));
-  doc.saveAndClose();
+
   logActivity('Incident report Doc created and placeholders replaced.', 'DEBUG');
-  return docId;
+  return doc;
 }
 
 /**
  * Overwrites Doc with full incident details, summary, investigation links, actions, and compliance checklist.
  */
-function insertSummaryToDoc(docId, summary, incident) {
+function insertSummaryToDoc(doc, summary, incident) {
+  const docId = doc.getId();
   logActivity('Inserting summary/details into Doc: ' + docId, 'DEBUG');
-  const doc = DocumentApp.openById(docId);
+
   const body = doc.getBody();
   body.clear();
 
