@@ -241,8 +241,8 @@ function processIncident(incident) {
       logActivity('Chronicle investigation triggered.', 'INFO');
     }
   } catch (err) {
-    logActivity('Error in processIncident: ' + err.stack || err.message, 'ERROR');
-    throw err; // rethrow for debugging
+    logActivity('Error in processIncident: ' + (err.stack || err.message), 'ERROR');
+    throw new Error('Incident processing failed. Check system logs for details.');
   }
 }
 
