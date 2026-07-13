@@ -299,11 +299,7 @@ function insertSummaryToDoc(docId, summary, incident) {
   actions.items.forEach(i => body.appendListItem(i));
 
   body.appendParagraph('Investigation Links').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-  [
-    ['VirusTotal', `https://www.virustotal.com/gui/ip-address/${incident.login_ip}`],
-    ['IP Info', `https://ipinfo.io/${incident.login_ip}`],
-    ['AbuseIPDB', `https://www.abuseipdb.com/check/${incident.login_ip}`]
-  ].forEach(([label, url]) => {
+  getInvestigationLinks(incident.login_ip).forEach(({ label, url }) => {
     const li = body.appendListItem(label);
     li.setLinkUrl(url);
   });
@@ -473,9 +469,9 @@ function sendIncidentNotification(incident, docId, summary, isActionable) {
         ${secOpsBox}
         <h3 style="margin-bottom:7px;">Investigate IP Address</h3>
         <div style="text-align:center; margin: 15px 0;">
-          <a href="https://www.virustotal.com/gui/ip-address/${incident.login_ip}" style="background:#1a73e8;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">VirusTotal</a>
-          <a href="https://ipinfo.io/${incident.login_ip}" style="background:#34a853;color:#fff;padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">IP Lookup</a>
-          <a href="https://www.abuseipdb.com/check/${incident.login_ip}" style="background:#fbbc05;color:#000;padding:10px 15px;border-radius:4px;text-decoration:none;" target="_blank">Check IOC DB</a>
+          ${getInvestigationLinks(incident.login_ip).map(link =>
+            `<a href="${link.url}" style="background:${link.bgColor};color:${link.color};padding:10px 15px;margin-right:10px;border-radius:4px;text-decoration:none;" target="_blank">${link.label}</a>`
+          ).join('\n          ')}
         </div>
         <div style="text-align:center;margin-top:32px;">
           <a href="${docUrl}" style="display:inline-block;background:#5e35b1;color:#fff;padding:14px 28px;margin:8px 4px 0 4px;border-radius:6px;text-decoration:none;font-size:16px;font-weight:bold;box-shadow:0 2px 6px rgba(0,0,0,0.08);" target="_blank">
@@ -631,4 +627,13 @@ function formatDateTime(iso) {
 function logActivity(msg, level = 'INFO') {
   const timestamp = new Date().toISOString();
   Logger.log(`[${timestamp}] [${level}] ${msg}`);
+}
+
+// Generate consistent investigation links across the app
+function getInvestigationLinks(ip) {
+  return [
+    { label: 'VirusTotal', url: `https://www.virustotal.com/gui/ip-address/${ip}`, bgColor: '#1a73e8', color: '#fff' },
+    { label: 'IP Lookup', url: `https://ipinfo.io/${ip}`, bgColor: '#34a853', color: '#fff' },
+    { label: 'Check IOC DB', url: `https://www.abuseipdb.com/check/${ip}`, bgColor: '#fbbc05', color: '#000' }
+  ];
 }
