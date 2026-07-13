@@ -17,7 +17,7 @@ const CONFIG = {
   DOC_PREFIX: 'Incident Report - ',               // Prefix for incident report document names
   LOG_SPREADSHEET_ID: 'SPREADSHEET-ID',           // Google Sheets ID for incident logging
   REPLY_TO_EMAIL: 'soar-bot@company.com',         // Reply-to address for email notifications
-  SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/XXX',  // Slack webhook for notifications
+  SLACK_WEBHOOK_URL: '',  // Slack webhook for notifications
   SLACK_GROUP_LINK: 'https://join.slack.com/...', // (Optional) Slack group invite for users
   FROM_EMAIL: 'sender@company.com',               // The validated sender email in Mailjet
   FROM_NAME: 'Security Incident Bot',             // Display name for sent emails
