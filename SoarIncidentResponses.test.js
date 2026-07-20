@@ -46,6 +46,9 @@ describe('doPost error handling', () => {
 
     // Event with invalid JSON
     const event = {
+      parameter: {
+        token: 'CHANGE_ME_SECURE_TOKEN'
+      },
       postData: {
         contents: 'invalid json data'
       }
