@@ -46,6 +46,9 @@ describe('doPost error handling', () => {
 
     // Event with invalid JSON
     const event = {
+      parameter: {
+        token: 'CHANGE_ME_SECURE_TOKEN'
+      },
       postData: {
         contents: 'invalid json data'
       }
@@ -63,5 +66,45 @@ describe('doPost error handling', () => {
 
     // Verify logs
     expect(logs.some(log => log.includes('[ERROR]') && log.includes('Webhook error:'))).toBe(true);
+  });
+});
+
+describe('isIncidentActionable tests', () => {
+  const mocks = {
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: (key) => {
+          if (key === 'IOC_IP_LIST') return JSON.stringify(['192.168.1.0/24']);
+          return null;
+        }
+      })
+    }
+  };
+
+  it('should return true if MFA is not used', () => {
+    const incident = {
+      login_ip: '10.0.0.1', // Not in IOC list
+      mfa_used: false
+    };
+    const result = runWithMocks(code, mocks, 'isIncidentActionable', incident);
+    expect(result).toBe(true);
+  });
+
+  it('should return true if IP matches IOC, even if MFA is used', () => {
+    const incident = {
+      login_ip: '192.168.1.100', // In IOC list
+      mfa_used: true
+    };
+    const result = runWithMocks(code, mocks, 'isIncidentActionable', incident);
+    expect(result).toBe(true);
+  });
+
+  it('should return false if MFA is used and IP does not match IOC', () => {
+    const incident = {
+      login_ip: '10.0.0.1', // Not in IOC list
+      mfa_used: true
+    };
+    const result = runWithMocks(code, mocks, 'isIncidentActionable', incident);
+    expect(result).toBe(false);
   });
 });
