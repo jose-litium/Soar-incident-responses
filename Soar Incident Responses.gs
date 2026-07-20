@@ -423,7 +423,7 @@ function getSeverityActionsArray(sev) {
 // Append incident to Google Sheet for audit/compliance
 function logIncidentToSheet(incident, docId) {
   try {
-    const isActionable = isIocIp(incident.login_ip) || !incident.mfa_used;
+    const isActionable = isIncidentActionable(incident);
     const sheet = SpreadsheetApp.openById(CONFIG.LOG_SPREADSHEET_ID).getSheets()[0];
     sheet.appendRow([
       incident.incident_id,
