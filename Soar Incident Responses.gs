@@ -253,12 +253,12 @@ function processIncident(incident) {
 // Generate unique incident IDs (e.g., INC-20240614-142010)
 function generateIncidentId() {
   const d = new Date();
+  const pad = (n) => {
+    const num = Number(n);
+    if (isNaN(num) || num < 0) return '00';
+    return String(num).padStart(2, '0');
+  };
   return `${CONFIG.INCIDENT_PREFIX}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-}
-function pad(n) {
-  var num = Number(n);
-  if (isNaN(num) || num < 0) return '00';
-  return num < 10 ? '0' + num : num.toString();
 }
 
 /**
