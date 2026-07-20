@@ -8,7 +8,6 @@
 2. **Edit the `CONFIG` object** in `Soar Incident Responses.gs`:
    - Set your template doc ID (`TEMPLATE_DOC_ID`)
    - Add your stakeholder emails (`STAKEHOLDER_EMAILS`)
-   - Set your Mailjet-validated sender email (`FROM_EMAIL`)
    - Paste your Slack webhook and group link
    - Update `WEBHOOK_TOKEN` with a strong, secure secret string
 

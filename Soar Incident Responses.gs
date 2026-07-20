@@ -19,9 +19,7 @@ const CONFIG = {
   REPLY_TO_EMAIL: 'soar-bot@company.com',         // Reply-to address for email notifications
   SLACK_WEBHOOK_URL: '',  // Slack webhook for notifications
   SLACK_GROUP_LINK: 'https://join.slack.com/...', // (Optional) Slack group invite for users
-  FROM_EMAIL: 'sender@company.com',               // The validated sender email in Mailjet
   FROM_NAME: 'Security Incident Bot',             // Display name for sent emails
-  USE_MAILJET: true,                              // Set false to fallback to GmailApp instead of Mailjet
   WEBHOOK_TOKEN: 'CHANGE_ME_SECURE_TOKEN'         // Token required to authenticate incoming webhooks
 };
 
