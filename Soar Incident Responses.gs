@@ -614,6 +614,10 @@ function sendSlackNotification(incident, docId, isActionable) {
       payload: JSON.stringify(payload)
     };
 
+    if (!CONFIG.SLACK_WEBHOOK_URL || !CONFIG.SLACK_WEBHOOK_URL.startsWith('https://hooks.slack.com/')) {
+      throw new Error('Invalid or missing SLACK_WEBHOOK_URL. URL must start with https://hooks.slack.com/');
+    }
+
     UrlFetchApp.fetch(CONFIG.SLACK_WEBHOOK_URL, options);
     logActivity('Slack notification sent successfully.', 'SUCCESS');
   } catch (e) {
