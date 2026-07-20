@@ -117,6 +117,8 @@ function main() {
  * IOC MANAGEMENT (for IP matching)
  * ================================ */
 
+let CACHED_IOC_CIDRS = null;
+
 /**
  * Download and store the latest malicious IPs (IOCs) from FireHOL as script property.
  * Run this on a time-based trigger to keep up to date.
@@ -128,6 +130,7 @@ function updateIocIpList() {
     const response = UrlFetchApp.fetch(url);
     const iocList = response.getContentText().split('\n').filter(line => line && !line.startsWith('#'));
     PropertiesService.getScriptProperties().setProperty('IOC_IP_LIST', JSON.stringify(iocList));
+    CACHED_IOC_CIDRS = iocList;
     logActivity('IOC IP list updated successfully.', 'SUCCESS');
   } catch (error) {
     logActivity(`Failed to update IOC IP list: ${error.message}`, 'ERROR');
@@ -138,10 +141,12 @@ function updateIocIpList() {
  * Checks if an IP matches any known malicious IOC (from CIDR blocks).
  */
 function isIocIp(ip) {
-  const props = PropertiesService.getScriptProperties();
-  const iocCidrs = JSON.parse(props.getProperty('IOC_IP_LIST') || '[]');
+  if (CACHED_IOC_CIDRS === null) {
+    const props = PropertiesService.getScriptProperties();
+    CACHED_IOC_CIDRS = JSON.parse(props.getProperty('IOC_IP_LIST') || '[]');
+  }
   const ipNum = ipToInt(ip);
-  for (let cidr of iocCidrs) {
+  for (let cidr of CACHED_IOC_CIDRS) {
     if (cidrContainsIp(cidr, ipNum)) return true;
   }
   return false;
