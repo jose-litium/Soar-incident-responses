@@ -46,6 +46,7 @@ describe('doPost error handling', () => {
 
     // Event with invalid JSON
     const event = {
+      parameter: { token: 'CHANGE_ME_SECURE_TOKEN' },
       postData: {
         contents: 'invalid json data'
       }
@@ -63,5 +64,94 @@ describe('doPost error handling', () => {
 
     // Verify logs
     expect(logs.some(log => log.includes('[ERROR]') && log.includes('Webhook error:'))).toBe(true);
+  });
+});
+
+describe('createIncidentFromData', () => {
+  const mocks = {
+    Logger: { log: () => {} }
+  };
+
+  it('should map a complete incident data object correctly (happy path)', () => {
+    const data = {
+      incident_id: 'INC-12345',
+      timestamp: '2023-01-01T00:00:00.000Z',
+      user: 'alice@company.com',
+      login_ip: '1.2.3.4',
+      location: 'New York',
+      mfa_used: true,
+      ioc_matched: true,
+      sensitive_data_accessed: false,
+      severity: 'Critical',
+      status: 'Investigating',
+      timeline: [{ time: '2023-01-01T00:00:00.000Z', event: 'Login' }],
+      actions_taken: ['Blocked IP']
+    };
+
+    const result = runWithMocks(code, mocks, 'createIncidentFromData', data);
+
+    expect(result).toEqual({
+      incident_id: 'INC-12345',
+      timestamp: '2023-01-01T00:00:00.000Z',
+      user: 'alice@company.com',
+      login_ip: '1.2.3.4',
+      location: 'New York',
+      mfa_used: true,
+      ioc_matched: true,
+      sensitive_data_accessed: false,
+      severity: 'Critical',
+      status: 'Investigating',
+      timeline: [{ time: '2023-01-01T00:00:00.000Z', event: 'Login' }],
+      actions_taken: ['Blocked IP']
+    });
+  });
+
+  it('should assign correct default values for an empty object', () => {
+    const result = runWithMocks(code, mocks, 'createIncidentFromData', {});
+
+    // incident_id should be generated
+    expect(result.incident_id).toMatch(/^INC-\d{8}-\d{6}$/);
+
+    // timestamp should be a valid ISO string
+    expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
+
+    expect(result.user).toBe('unknown@company.com');
+    expect(result.login_ip).toBe('0.0.0.0');
+    expect(result.location).toBe('Unknown');
+    expect(result.mfa_used).toBe(false);
+    expect(result.ioc_matched).toBe(false);
+    expect(result.sensitive_data_accessed).toBe(false);
+    expect(result.severity).toBe('Medium');
+    expect(result.status).toBe('Open');
+    expect(result.timeline).toEqual([]);
+    expect(result.actions_taken).toEqual([]);
+  });
+
+  it('should properly format severity casing', () => {
+    expect(runWithMocks(code, mocks, 'createIncidentFromData', { severity: 'HIGH' }).severity).toBe('High');
+    expect(runWithMocks(code, mocks, 'createIncidentFromData', { severity: 'low' }).severity).toBe('Low');
+    expect(runWithMocks(code, mocks, 'createIncidentFromData', { severity: 'cRiTiCaL' }).severity).toBe('Critical');
+  });
+
+  it('should strictly cast boolean fields', () => {
+    const result = runWithMocks(code, mocks, 'createIncidentFromData', {
+      mfa_used: 'yes', // truthy
+      ioc_matched: 1, // truthy
+      sensitive_data_accessed: null // falsy
+    });
+
+    expect(result.mfa_used).toBe(true);
+    expect(result.ioc_matched).toBe(true);
+    expect(result.sensitive_data_accessed).toBe(false);
+  });
+
+  it('should fallback to empty arrays when timeline or actions_taken are not arrays', () => {
+    const result = runWithMocks(code, mocks, 'createIncidentFromData', {
+      timeline: 'Not an array',
+      actions_taken: { action: 'blocked' }
+    });
+
+    expect(result.timeline).toEqual([]);
+    expect(result.actions_taken).toEqual([]);
   });
 });
