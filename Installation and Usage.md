@@ -51,7 +51,6 @@ Clone this repository, or download the files directly from GitHub.
   - Your Google Docs template ID (`TEMPLATE_DOC_ID`)
   - Your stakeholder email(s) (`STAKEHOLDER_EMAILS`)
   - The incident log Sheet ID (`LOG_SPREADSHEET_ID`)
-  - Your validated sender address for Mailjet (`FROM_EMAIL`)
   - Slack webhook URL (`SLACK_WEBHOOK_URL`)
   - Slack group link (`SLACK_GROUP_LINK`)
   - Your secure webhook token (`WEBHOOK_TOKEN`)
