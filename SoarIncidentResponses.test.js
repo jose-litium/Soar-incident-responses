@@ -49,7 +49,7 @@ describe('doPost error handling', () => {
       }
     };
 
-    // Event with invalid JSON
+    // Event with invalid JSON and correct token
     const event = {
       parameter: { token: 'CHANGE_ME_SECURE_TOKEN' },
       postData: {
@@ -72,5 +72,29 @@ describe('doPost error handling', () => {
 
     // Verify logs
     expect(logs.some(log => log.includes('[ERROR]') && log.includes('Webhook error:'))).toBe(true);
+  });
+});
+
+describe('updateIocIpList error handling', () => {
+  it('should handle fetch errors and log a failure message', () => {
+    const logs = [];
+
+    // Mocks
+    const mocks = {
+      Logger: {
+        log: (msg) => logs.push(msg)
+      },
+      UrlFetchApp: {
+        fetch: () => {
+          throw new Error('Network timeout');
+        }
+      }
+    };
+
+    // Run the function
+    runWithMocks(code, mocks, 'updateIocIpList');
+
+    // Verify logs
+    expect(logs.some(log => log.includes('[ERROR]') && log.includes('Failed to update IOC IP list: Network timeout'))).toBe(true);
   });
 });
