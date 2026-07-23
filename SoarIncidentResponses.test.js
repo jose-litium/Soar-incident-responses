@@ -28,6 +28,11 @@ describe('doPost error handling', () => {
       Logger: {
         log: (msg) => logs.push(msg)
       },
+      PropertiesService: {
+        getScriptProperties: () => ({
+          getProperty: (key) => key === 'WEBHOOK_TOKEN' ? 'CHANGE_ME_SECURE_TOKEN' : null
+        })
+      },
       ContentService: {
         MimeType: { JSON: 'application/json' },
         createTextOutput: function(text) {
@@ -46,6 +51,7 @@ describe('doPost error handling', () => {
 
     // Event with invalid JSON
     const event = {
+      parameter: { token: 'CHANGE_ME_SECURE_TOKEN' },
       postData: {
         contents: 'invalid json data'
       },
